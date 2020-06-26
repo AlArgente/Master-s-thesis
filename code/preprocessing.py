@@ -13,11 +13,11 @@ from nltk import word_tokenize, sent_tokenize
 from nltk.corpus import stopwords
 from stop_words import get_stop_words
 from nltk.stem import PorterStemmer
-from embeddings import FTEmbeddings
+from factory_embeddings import FactoryEmbeddings
 
 
 class Preprocessing:
-    '''Class to preprocess the data.
+    '''Class to preprocess text data.
     '''
     @staticmethod
     def pipeline1(data):
@@ -29,15 +29,20 @@ class Preprocessing:
             - pdata: data preprocessed
         '''
         pdata = copy.deepcopy(data)
+        print('Preprocesado de las sentencias')
         pdata = Preprocessing.preprocess_all_sentences(pdata)
+        print('Tokenización')
         pdata = Preprocessing.tokenize(pdata)
+        print('Eliminación de stopwords')
         pdata = Preprocessing.delete_stopwords(pdata)
+        print('Stemming')
         pdata = Preprocessing.stemming(pdata)
+        print('Padding a los documentos')
         pdata = Preprocessing.pad_sentences(pdata)
         return pdata
 
     @staticmethod
-    def pipeline2(data):
+    def pipeline2(data, emb_type):
         '''Second pipeline of preprocessing. Preprocess all the data with embeddings.
 
         Arguments:
@@ -46,12 +51,18 @@ class Preprocessing:
             - pdata: data preprocessed
         '''
         pdata = copy.deepcopy(data)
+        print('Preprocesado de las sentencias')
         pdata = Preprocessing.preprocess_all_sentences(pdata)
+        print('Tokenización')
         pdata = Preprocessing.tokenize(pdata)
+        print('Eliminación de stopwords')
         pdata = Preprocessing.delete_stopwords(pdata)
+        print('Stemming')
         pdata = Preprocessing.stemming(pdata)
+        print('Padding a los documentos')
         pdata = Preprocessing.pad_sentences(pdata)
-        embeddings = Preprocessing.calculate_embeddings(pdata)
+        print('Cálculo de embeddings')
+        embeddings = Preprocessing.calculate_embeddings(pdata, emb_type)
         return pdata, embeddings
 
     @staticmethod
@@ -73,7 +84,7 @@ class Preprocessing:
 
     @staticmethod
     def preprocess_sentence(w):
-        w = self.unicode_to_ascii(w.lower().strip())
+        w = Preprocessing.unicode_to_ascii(w.lower().strip())
 
         # creating a space between a word and the punctuation following it
         # eg: "he is a boy." => "he is a boy ."
@@ -88,8 +99,100 @@ class Preprocessing:
 
         # adding a start and an end token to the sentence
         # so that the model know when to start and stop predicting.
-        w = '<start> ' + w + ' <end>'
+        # w = '<start> ' + w + ' <end>'
         return w
+
+    @staticmethod
+    def remove_contractions(text):
+        """
+        Remove all the possible contractions in the text so we can tokenize it
+        better and to delete more stopwords.
+        """
+        contractions = {
+            "ain't": "am not",
+            "aren't": "are not",
+            "can't": "cannot",
+            "can't've": "cannot have",
+            "'cause": "because",
+            "could've": "could have",
+            "couldn't": "could not",
+            "couldn't've": "could not have",
+            "didn't": "did not",
+            "doesn't": "does not",
+            "don't": "do not",
+            "hadn't": "had not",
+            "hadn't've": "had not have",
+            "hasn't": "has not",
+            "haven't": "have not",
+            "he'd": "he would",
+            "he'd've": "he would have",
+            "he'll": "he will",
+            "he'll've": "he will have",
+            "he's": "he is",
+            "how'd": "how did",
+            "how'd'y": "how do you",
+            "how'll": "how will",
+            "how's": "how does",
+            "i'd": "i would",
+            "i'd've": "i would have",
+            "i'll": "i will",
+            "i'll've": "i will have",
+            "i'm": "i am",
+            "i've": "i have",
+            "isn't": "is not",
+            "it'd": "it would",
+            "it'd've": "it would have",
+            "it'll": "it will",
+            "it'll've": "it will have",
+            "it's": "it is",
+            "let's": "let us",
+            "ma'am": "madam",
+            "mayn't": "may not",
+            "might've": "might have",
+            "mightn't": "might not",
+            "mightn't've": "might not have",
+            "must've": "must have",
+            "mustn't": "must not",
+            "mustn't've": "must not have",
+            "needn't": "need not",
+            "needn't've": "need not have",
+            "o'clock": "of the clock",
+            "oughtn't": "ought not",
+            "oughtn't've": "ought not have",
+            "shan't": "shall not",
+            "sha'n't": "shall not",
+            "shan't've": "shall not have",
+            "she'd": "she would",
+            "she'd've": "she would have",
+            "she'll": "she will",
+            "she'll've": "she will have",
+            "she's": "she is",
+            "should've": "should have",
+            "shouldn't": "should not",
+            "shouldn't've": "should not have",
+            "so've": "so have",
+            "so's": "so is",
+            "that'd": "that would",
+            "that'd've": "that would have",
+            "that's": "that is",
+            "there'd": "there would",
+            "there'd've": "there would have",
+            "there's": "there is",
+            "they'd": "they would",
+            "they'd've": "they would have",
+            "they'll": "they will",
+            "they'll've": "they will have",
+            "they're": "they are",
+            "they've": "they have",
+            "to've": "to have",
+            "wasn't": "was not",
+            " u ": " you ",
+            " ur ": " your ",
+            " n ": " and "}
+        for word in text.split():
+            if word.lower() in contractions:
+                text = text.replace(word, contractions[word.lower()])
+        return text
 
     @staticmethod
     def preprocess_all_sentences(data):
@@ -100,7 +203,7 @@ class Preprocessing:
              - data preprocessed.
         '''
         for i in range(len(data)):
-            data[i] = self.preprocess_sentence(data[i])
+            data[i] = Preprocessing.preprocess_sentence(data[i])
         return data
 
     @staticmethod
@@ -130,7 +233,7 @@ class Preprocessing:
         return [[w for w in word if w not in all_stop_words] for word in text]
 
     @staticmethod
-    def pad_sentences(text, max_len):
+    def pad_sentences(text, max_len=10):
         '''Function to pad the sentences from the text to a max_len
         Arguments:
             - text: list of lists that will be padded to the max_len argument.
@@ -149,13 +252,14 @@ class Preprocessing:
         return text
 
     @staticmethod
-    def calculate_embeddings(text):
+    def calculate_embeddings(text, type = 'glove'):
         '''Calculate fasttext embeddings for the data
         Params:
             - text: list o lists. The text must be tokenized before entering here.
         Returns:
             - embeddings from the text.
         '''
-        ft = FTEmbeddings()
-        embeddings = ft.apply_vectors(text)
+        emb = FactoryEmbeddings()
+        emb.load_embeddings(type)
+        embeddings = emb.embeddings.calc_embeddings(text=text)
         return embeddings

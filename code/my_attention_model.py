@@ -19,8 +19,8 @@ OPTIMIZERS = {
 class AttentionModel(Layer):
     '''Class that contain the attention model created for the Proppy database.
     '''
-    def __init__(self, batch_size, epochs, buffer_size, max_features, max_len, filters, kernel_size, optimizer,
-                 max_sentence_len, lstm_units, embedding_size=300, load_embeddings=False):
+    def __init__(self, batch_size, epochs, buffer_size, filters, kernel_size, optimizer, max_sentence_len, lstm_units,
+                 embedding_size=300, max_len=1900, load_embeddings=False, max_features=2000):
         """Init function for the model.
         """
         super(AttentionModel, self).__init__()
