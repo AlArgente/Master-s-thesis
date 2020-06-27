@@ -20,7 +20,7 @@ class Preprocessing:
     '''Class to preprocess text data.
     '''
     @staticmethod
-    def pipeline1(data):
+    def pipeline(data):
         '''First pipeline of preprocessing. Preprocess all the data without embeddings.
 
         Arguments:
@@ -29,41 +29,52 @@ class Preprocessing:
             - pdata: data preprocessed
         '''
         pdata = copy.deepcopy(data)
-        print('Preprocesado de las sentencias')
+        print('Preprocesado de las sentencias.')
         pdata = Preprocessing.preprocess_all_sentences(pdata)
-        print('Tokenización')
+        print ('Conversión de contracciones.')
+        pdata = Preprocessing.remove_all_contractions(pdata)
+        print('Tokenización.')
         pdata = Preprocessing.tokenize(pdata)
-        print('Eliminación de stopwords')
+        print('Eliminación de stopwords.')
         pdata = Preprocessing.delete_stopwords(pdata)
-        print('Stemming')
+        print('Stemming.')
         pdata = Preprocessing.stemming(pdata)
-        print('Padding a los documentos')
+        print('Padding a los documentos.')
         pdata = Preprocessing.pad_sentences(pdata)
         return pdata
 
     @staticmethod
-    def pipeline2(data, emb_type):
-        '''Second pipeline of preprocessing. Preprocess all the data with embeddings.
+    def pipeline_all_data(train, test, dev):
+        '''First pipeline of preprocessing. Preprocess all the data without embeddings.
 
         Arguments:
-            - data: data to preprocess
+            - train: train DataFrame
+            - test: test DataFrame
+            - dev: dev DataFrame
         Returns:
-            - pdata: data preprocessed
+            - train: Train with one more column that contains the first column preprocessed
+            - test: Test with one more column that contains the first column preprocessed
+            - dev: Dev with one more column that contains the first column preprocessed
         '''
-        pdata = copy.deepcopy(data)
-        print('Preprocesado de las sentencias')
-        pdata = Preprocessing.preprocess_all_sentences(pdata)
-        print('Tokenización')
-        pdata = Preprocessing.tokenize(pdata)
-        print('Eliminación de stopwords')
-        pdata = Preprocessing.delete_stopwords(pdata)
-        print('Stemming')
-        pdata = Preprocessing.stemming(pdata)
-        print('Padding a los documentos')
-        pdata = Preprocessing.pad_sentences(pdata)
-        print('Cálculo de embeddings')
-        embeddings = Preprocessing.calculate_embeddings(pdata, emb_type)
-        return pdata, embeddings
+        ptrain = copy.deepcopy(train)
+        ptest = copy.deepcopy(test)
+        pdev = copy.deepcopy(dev)
+
+        for pdata in [ptrain, ptest, pdev]:
+            print('Preprocesado de las sentencias.')
+            pdata = Preprocessing.preprocess_all_sentences(pdata)
+            print('Conversión de contracciones.')
+            pdata = Preprocessing.remove_all_contractions(pdata)
+            print('Tokenización.')
+            pdata = Preprocessing.tokenize(pdata)
+            print('Eliminación de stopwords.')
+            pdata = Preprocessing.delete_stopwords(pdata)
+            print('Stemming.')
+            pdata = Preprocessing.stemming(pdata)
+            print('Padding a los documentos.')
+            pdata = Preprocessing.pad_sentences(pdata)
+
+        return ptrain, ptest, pdev
 
     @staticmethod
     def tokenize(text):
@@ -101,6 +112,12 @@ class Preprocessing:
         # so that the model know when to start and stop predicting.
         # w = '<start> ' + w + ' <end>'
         return w
+
+    @staticmethod
+    def remove_all_contractions(text):
+        for i in range(len(text)):
+            text[i] = Preprocessing.remove_contractions(text[i])
+        return text
 
     @staticmethod
     def remove_contractions(text):
@@ -215,7 +232,9 @@ class Preprocessing:
             - list of lists with the stem applied.
         '''
         stemmer = PorterStemmer()
-        return [[stemmer.stem(token) for token in sentence] for sentence in text]
+        stem_list = [[stemmer.stem(token) for token in sentence] for sentence in text]
+        stem_join = [' '.join(sentence) for sentence in stem_list]
+        return stem_list, stem_join
 
     @staticmethod
     def delete_stopwords(text):

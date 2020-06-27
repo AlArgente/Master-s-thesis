@@ -2,7 +2,7 @@ from embeddings import GloveEmbeddings, FTEmbeddings
 
 class FactoryEmbeddings:
     """Factory class
-    This class will be used to initialize the differents embeddings with just one parameter.
+    This class will be used to initialize the different embeddings with just one parameter.
     """
 
     def __init__(self):
@@ -19,6 +19,7 @@ class FactoryEmbeddings:
             self.__embeddings = value
         def fdel(self):
             del self.__embeddings
+        return locals()
     embeddings = property(**embeddings())
 
     def load_embeddings(self, type):

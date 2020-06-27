@@ -12,6 +12,10 @@ class Embeddings(ABC):
     def wordvecs(self):
         return self.__wordvecs
 
+    @property
+    def vocabulary(self):
+        return list(self.__wordvecs.keys())
+
     @abstractmethod
     def load_vectors(self, fname):
         pass
@@ -23,8 +27,6 @@ class Embeddings(ABC):
         Returns:
             - embeddings: list of embeddings.
         """
-        assert isinstance(text, list)
-
         embeddings = []
         # null_embeddings = np.zeros(self.d)
 
@@ -35,9 +37,8 @@ class Embeddings(ABC):
                     embedding_word = self.__wordvecs[word]
                 else:
                     embedding_word = np.random.normal(0, 1, self.d)
+                    self.__wordvecs[word] = embedding_word
                 embedding_sentence.append(embedding_word)
-            print(len(embedding_sentence[0]))
-            time.sleep(1)
             embeddings.append(embedding_sentence)
 
         """
@@ -52,7 +53,7 @@ class Embeddings(ABC):
                 embedding_sentence.append(embedding_word)
             embeddings.append(embedding_sentence)
         """
-        return embeddings
+        return np.asarray(embeddings)
 
 
 
@@ -81,12 +82,11 @@ class FTEmbeddings(Embeddings):
         """Function to load the Fasttext embeddings instead of random initialize them
         """
         fin = io.open(fname, 'r', encoding='utf-8', newline='\n', errors='ignore')
-        n, d = map(int, fin.readline().split())
+        # n, d = map(int, fin.readline().split())
         print('Paso aquí')
         data = {}
         for line in fin:
-            print(line)
-            time.sleep(10)
             tokens = line.rstrip().split(' ')
-            data[tokens[0]] = map(float, tokens[1:])
+            # data[tokens[0]] = map(float, tokens[1:])
+            data[tokens[0]] = np.array(tokens[1:])
         return data
