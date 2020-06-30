@@ -19,6 +19,7 @@ from factory_embeddings import FactoryEmbeddings
 class Preprocessing:
     '''Class to preprocess text data.
     '''
+
     @staticmethod
     def pipeline(data):
         '''First pipeline of preprocessing. Preprocess all the data without embeddings.
@@ -26,55 +27,27 @@ class Preprocessing:
         Arguments:
             - data: data to preprocess
         Returns:
-            - pdata: data preprocessed
+            - pdata_stem: Data with all the preprocess applied.
+            - pdata_join: Same as pdata_stem but each instance ins joined as sentence.
         '''
+        # Safe copy from the data to preprocess
         pdata = copy.deepcopy(data)
         print('Preprocesado de las sentencias.')
+        # Tokenize the punctuation
         pdata = Preprocessing.preprocess_all_sentences(pdata)
-        print ('Conversión de contracciones.')
+        print('Conversión de contracciones.')
+        # Remove all the possible contractions
         pdata = Preprocessing.remove_all_contractions(pdata)
         print('Tokenización.')
+        # Tokenize the data.
         pdata = Preprocessing.tokenize(pdata)
         print('Eliminación de stopwords.')
+        # Delete stopwords from the data
         pdata = Preprocessing.delete_stopwords(pdata)
         print('Stemming.')
-        pdata = Preprocessing.stemming(pdata)
-        print('Padding a los documentos.')
-        pdata = Preprocessing.pad_sentences(pdata)
-        return pdata
-
-    @staticmethod
-    def pipeline_all_data(train, test, dev):
-        '''First pipeline of preprocessing. Preprocess all the data without embeddings.
-
-        Arguments:
-            - train: train DataFrame
-            - test: test DataFrame
-            - dev: dev DataFrame
-        Returns:
-            - train: Train with one more column that contains the first column preprocessed
-            - test: Test with one more column that contains the first column preprocessed
-            - dev: Dev with one more column that contains the first column preprocessed
-        '''
-        ptrain = copy.deepcopy(train)
-        ptest = copy.deepcopy(test)
-        pdev = copy.deepcopy(dev)
-
-        for pdata in [ptrain, ptest, pdev]:
-            print('Preprocesado de las sentencias.')
-            pdata = Preprocessing.preprocess_all_sentences(pdata)
-            print('Conversión de contracciones.')
-            pdata = Preprocessing.remove_all_contractions(pdata)
-            print('Tokenización.')
-            pdata = Preprocessing.tokenize(pdata)
-            print('Eliminación de stopwords.')
-            pdata = Preprocessing.delete_stopwords(pdata)
-            print('Stemming.')
-            pdata = Preprocessing.stemming(pdata)
-            print('Padding a los documentos.')
-            pdata = Preprocessing.pad_sentences(pdata)
-
-        return ptrain, ptest, pdev
+        # Stem the data
+        pdata_stem, pdata_join = Preprocessing.stemming(pdata)
+        return pdata_stem, pdata_join
 
     @staticmethod
     def tokenize(text):
@@ -85,16 +58,21 @@ class Preprocessing:
         Returns:
             - A list with all the text tokenized
         '''
+        # Uso nltk tokenizer to tokenize
         return [word_tokenize(sentence) for sentence in text]
 
     # Converts the unicode file to ascii
     @staticmethod
     def unicode_to_ascii(s):
+        """Function that transform the data from unidecode to ascii
+        """
         return ''.join(c for c in unicodedata.normalize('NFD', s)
                        if unicodedata.category(c) != 'Mn')
 
     @staticmethod
     def preprocess_sentence(w):
+        """Function that split the punctuation.
+        """
         w = Preprocessing.unicode_to_ascii(w.lower().strip())
 
         # creating a space between a word and the punctuation following it
@@ -115,6 +93,8 @@ class Preprocessing:
 
     @staticmethod
     def remove_all_contractions(text):
+        """Function to apply remove_contractions function to all the data
+        """
         for i in range(len(text)):
             text[i] = Preprocessing.remove_contractions(text[i])
         return text
@@ -224,7 +204,7 @@ class Preprocessing:
         return data
 
     @staticmethod
-    def stemming( text):
+    def stemming(text):
         '''Function to get the stem for every word
         Arguments:
             - text: list of lists with the text tokenized.
@@ -232,7 +212,9 @@ class Preprocessing:
             - list of lists with the stem applied.
         '''
         stemmer = PorterStemmer()
+        # Stem all the data
         stem_list = [[stemmer.stem(token) for token in sentence] for sentence in text]
+        # Generate the instances with join
         stem_join = [' '.join(sentence) for sentence in stem_list]
         return stem_list, stem_join
 
@@ -253,7 +235,8 @@ class Preprocessing:
 
     @staticmethod
     def pad_sentences(text, max_len=10):
-        '''Function to pad the sentences from the text to a max_len
+        '''Function to pad the sentences from the text to a max_len.
+        Actually this function is not used because I'm applying pad_sequences from TensorFlow.
         Arguments:
             - text: list of lists that will be padded to the max_len argument.
             - max_len: int that indicates the max lenght for every sentence.
@@ -265,18 +248,20 @@ class Preprocessing:
                 text[i] = text[i][:max_len]
             elif len(text[i]) < max_len:
                 if isinstance(text[i], str):
-                    text[i] = text[i] + ''.join([str(0) for j in range(max_len-len(text[i]))])
+                    text[i] = text[i] + ''.join([str(0) for j in range(max_len - len(text[i]))])
                 elif isinstance(text[i], list):
                     text[i] += [0 for i in range(max_len - len(text[i]))]
         return text
 
     @staticmethod
-    def calculate_embeddings(text, type = 'glove'):
-        '''Calculate fasttext embeddings for the data
+    def calculate_embeddings(text, type='glove'):
+        '''Calculate fasttext embeddings for the data.
+        Not used because it's needed to calculate the vocabulary and that it's done in basemodel.py
         Params:
             - text: list o lists. The text must be tokenized before entering here.
         Returns:
-            - embeddings from the text.
+            - embeddings from the text. Matrix of embeddings, with each sequence with his corresponding array of
+            embeddings.
         '''
         emb = FactoryEmbeddings()
         emb.load_embeddings(type)

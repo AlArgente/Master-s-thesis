@@ -5,17 +5,22 @@ class ModelConfig(Enum):
     """All possible configurations for the attention model
     """
     TrainEmbeddings = {
-        'batch_size' : 32,
-        'epochs' : 40,
-        'vocab_size' : 2000,
-        'max_len' : 10,
-        'filters' : 64,
-        'kernel_size':5,
-        'optimizer' : 'adam',
-        'learning_rate' : 1e-3,
-        'max_sentence_len' : 128,
-        'lstm_units' : 25,
-        'pool_size' : 2,
-        'embedding_size' : 300,
-        'load_embeddings' : True
+        'batch_size' : 64,
+        'epochs' : 2,
+        'filters': 64,
+        'kernel_size': 5,
+        'optimizer': 'adam',
+        'max_sequence_len': 800,
+        'lstm_units': 75,
+        'path_train' : '../data/train_preprocessed.tsv',
+        'path_test': '../data/test_preprocessed.tsv',
+        'path_dev': '../data/dev_preprocessed.tsv',
+        'vocab_size' : None,
+        'learning_rate': 1e-3,
+        'pool_size': 2,
+        'embedding_size': 300,
+        'max_len' : 100000,
+        'load_embeddings' : True,
+        'buffer_size' : 3,
+        'emb_type' : 'fasttext'
     }

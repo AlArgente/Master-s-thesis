@@ -4,40 +4,45 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 class Embeddings(ABC):
+    """Abstract class to load different embeddings
+    """
     def __init__(self):
         self.d = 300
-        self.__wordvecs = {}
-
-    @property
-    def wordvecs(self):
-        return self.__wordvecs
+        self.__vocabulary = {}
+        self.__embeddings_matrix = []
 
     @property
     def vocabulary(self):
-        return list(self.__wordvecs.keys())
+        return self.__vocabulary
+
+    @property
+    def embeddings_matrix(self):
+        return self.__embeddings_matrix
 
     @abstractmethod
     def load_vectors(self, fname):
         pass
 
     def calc_embeddings(self, text):
+        # DEPRECATED: To delete
         """Function that apply the vector to get the embeddings from the text.
         Arguments:
             - text: list of lists with the text at least tokenized.
         Returns:
             - embeddings: list of embeddings.
         """
+        # This function will be deleted in the future
         embeddings = []
         # null_embeddings = np.zeros(self.d)
 
         for sentence in text:
             embedding_sentence = []
             for word in sentence:
-                if word in self.__wordvecs:
-                    embedding_word = self.__wordvecs[word]
+                if word in self.__vocabulary:
+                    embedding_word = self.__vocabulary[word]
                 else:
                     embedding_word = np.random.normal(0, 1, self.d)
-                    self.__wordvecs[word] = embedding_word
+                    self.__vocabulary[word] = embedding_word
                 embedding_sentence.append(embedding_word)
             embeddings.append(embedding_sentence)
 
@@ -58,21 +63,36 @@ class Embeddings(ABC):
 
 
 class GloveEmbeddings(Embeddings):
+    """Class to load the Glove embeddings
+    """
     def __init__(self):
         super(GloveEmbeddings, self).__init__()
         self.load_vectors()
         print('Embeddings cargados')
 
     def load_vectors(self, fname='../glove.6B.300d.txt'):
+        """Function to load the Fasttext embeddings instead of random initialize them
+        """
+        # Aux word for possibles new words out of our vocabulary
+        self.vocabulary['NEWWORD'] = len(self.vocabulary)
+        # Generate a random embedding for this new words.
+        self.embeddings_matrix.append(np.random.normal(0, 1, 300))
         with open(fname, 'r') as f:
             lines = f.readlines()
             for line in lines:
                 token = line.split(' ')
+                # Read the embedding as a np.array
                 vec = np.array(token[1:], dtype=np.float32)
-                self.wordvecs[token[0]] = vec
+                # Create the vocabulary with Glove embeddings
+                # Adding to each word the corresponding index
+                self.vocabulary[token[0]] = len(self.vocabulary)
+                # Add the embedding to the matrix of embeddings
+                self.embeddings_matrix.append(vec)
 
 
 class FTEmbeddings(Embeddings):
+    """Class to load the FastText embeddings
+    """
     def __init__(self):
         super(FTEmbeddings, self).__init__()
         self.load_vectors()
@@ -82,11 +102,16 @@ class FTEmbeddings(Embeddings):
         """Function to load the Fasttext embeddings instead of random initialize them
         """
         fin = io.open(fname, 'r', encoding='utf-8', newline='\n', errors='ignore')
-        # n, d = map(int, fin.readline().split())
-        print('Paso aquí')
-        data = {}
+        # Aux word for possibles new words out of our vocabulary
+        self.vocabulary['NEWWORD'] = len(self.vocabulary)
+        # Generate a random embedding for this new words.
+        self.embeddings_matrix.append(np.random.normal(0, 1, 300))
         for line in fin:
             tokens = line.rstrip().split(' ')
-            # data[tokens[0]] = map(float, tokens[1:])
-            data[tokens[0]] = np.array(tokens[1:])
-        return data
+            if (len(tokens[1:]) == 300):
+                # data[tokens[0]] = map(float, tokens[1:])
+                # Create the vocabulary with Glove embeddings
+                # Adding to each word the corresponding index
+                self.vocabulary[tokens[0]] = len(self.vocabulary)
+                # Add the embedding to the matrix of embeddings as a np.array
+                self.embeddings_matrix.append(np.array(tokens[1:]))
