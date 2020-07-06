@@ -5,7 +5,7 @@ import argparse
 import time
 import os
 
-from cnnrnn import CNNRNNModel
+from cnnrnn_model import CNNRNNModel
 from preprocessing import Preprocessing
 import pandas as pd
 from modelconfiguration import ModelConfig
@@ -61,7 +61,7 @@ def main():
                                path_dev=config['path_dev'], emb_type=config['emb_type'], buffer_size = config['buffer_size'])
         model.prepare_data()
         print('Building the model.')
-        model.build(300)
+        model.call(300)
         print('Previo a fit')
         model.fit(with_validation=False)
         print('Previo a predict')
@@ -77,7 +77,7 @@ def main():
                                max_sentence_len=config['max_sentence_len'], lstm_units=config['lstm_units'],
                                embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
                                pool_size=config['pool_size'])
-        model.build()
+        model.call()
         model.fit(with_validation=False)
     else:
         print('No other mode implemented yed.')
