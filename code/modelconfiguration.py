@@ -5,8 +5,8 @@ class ModelConfig(Enum):
     """All possible configurations for the attention model
     """
     TrainEmbeddings = {
-        'batch_size' : 64,
-        'epochs' : 5,
+        'batch_size' : 16,
+        'epochs' : 2,
         'filters': 64,
         'kernel_size': 5,
         'optimizer': 'adam',
@@ -16,11 +16,11 @@ class ModelConfig(Enum):
         'path_test': '../data/test_preprocessed.tsv',
         'path_dev': '../data/dev_preprocessed.tsv',
         'vocab_size' : None,
-        'learning_rate': 1e-5,
+        'learning_rate': 3e-5,
         'pool_size': 2,
         'embedding_size': 300,
         'max_len' : 100000,
         'load_embeddings' : True,
         'buffer_size' : 3,
-        'emb_type' : 'fasttext'
+        'emb_type' : 'glove'
     }

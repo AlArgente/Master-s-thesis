@@ -71,8 +71,9 @@ class GloveEmbeddings(Embeddings):
         print('Embeddings cargados')
 
     def load_vectors(self, fname='../glove.6B.300d.txt'):
-        """Function to load the Fasttext embeddings instead of random initialize them
+        """Function to load the Glove embeddings instead of random initialize them
         """
+        print('Loading Glove')
         # Aux word for possibles new words out of our vocabulary
         self.vocabulary['NEWWORD'] = len(self.vocabulary)
         # Generate a random embedding for this new words.
@@ -102,6 +103,7 @@ class FTEmbeddings(Embeddings):
         """Function to load the Fasttext embeddings instead of random initialize them
         """
         fin = io.open(fname, 'r', encoding='utf-8', newline='\n', errors='ignore')
+        print('Loading FastText')
         # Aux word for possibles new words out of our vocabulary
         self.vocabulary['NEWWORD'] = len(self.vocabulary)
         # Generate a random embedding for this new words.

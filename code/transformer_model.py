@@ -82,9 +82,21 @@ class TransformerEncoder(BaseModel):
 
         return x  # (batch_size, input_seq_len, d_model)
 
+    @tf.function
+    def train_step(self, inp, tar):
+        tar_inp = tar[:, :-1]
+        tar_real = tar[:, :-1]
+
     def fit(self, with_validation=False):
         """Fit the model. Implement
         Arguments:
             - with_validation (bool): If True test data is applied as validation set
         """
-        pass
+        train_step_signature = [
+            tf.TensorShape(shape=(None, None), dtype=tf.int64),
+            tf.TensorShape(shape=(None, None), dtype=tf.int64),
+        ]
+
+        for epoch in range(self.epochs):
+            start = time.time()
+

@@ -3,28 +3,23 @@ File for the attention model created
 """
 from __future__ import print_function
 
-import time
-import io
-import numpy as np
-import pandas as pd
 import tensorflow as tf
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import LSTM, Bidirectional, Conv1D, Attention, GlobalAveragePooling1D, GlobalMaxPool1D, Dropout, Layer, Dense, MaxPool1D
-from tensorflow.keras.optimizers import Adam, RMSprop
+from tensorflow.keras.layers import LSTM, Bidirectional, Conv1D, Attention, GlobalAveragePooling1D, GlobalMaxPool1D, \
+    Dropout, Layer, Dense, MaxPool1D
 from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy, SparseCategoricalCrossentropy
 from tensorflow.keras.regularizers import l2, l1, l1_l2
 from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
-from ast import literal_eval
-import tensorflow_datasets as tfds
-from collections import Counter
 from basemodel import BaseModel
+
 
 class CNNRNNModel(BaseModel):
     '''Class that contain the attention model created for the Proppy database.
     '''
+
     def __init__(self, batch_size, epochs, filters, kernel_size, optimizer, max_sequence_len, lstm_units,
-                 path_train, path_test, path_dev, vocab_size, learning_rate = 1e-3, pool_size=4,
+                 path_train, path_test, path_dev, vocab_size, learning_rate=1e-3, pool_size=4,
                  embedding_size=300, max_len=1900, load_embeddings=True, buffer_size=3, emb_type='fasttext'):
         """Init function for the model.
         """
@@ -59,37 +54,48 @@ class CNNRNNModel(BaseModel):
         if self.load_embeddings:
             # Load fasttext or glove embeddings and use it to train the model
             self.model.add(
-                tf.keras.layers.Embedding(self.embeddings_matrix.shape[0], self.embeddings_matrix.shape[1], weights=[self.embeddings_matrix],
-                                          input_length=self.max_sequence_len, trainable=False))
+                tf.keras.layers.Embedding(self.embeddings_matrix.shape[0], self.embeddings_matrix.shape[1],
+                                          weights=[self.embeddings_matrix], input_length=self.max_sequence_len,
+                                          trainable=False))
             self.model.add(
-                Conv1D(self.filters, self.kernel_size, activation='relu', padding='same', kernel_regularizer=l2(0.0001)))
+               Conv1D(self.filters, self.kernel_size, activation='relu', padding='same',
+                      kernel_regularizer=l2(0.0001)))
+            self.model.add(MaxPool1D(pool_size=self.pool_size))
         else:
             # Initialize the model with random embeddings and train them.
             # Fisrt: Create vocabulary
             # Second:
-            self.model.add(tf.keras.layers.Embedding(self.vocab_size, self.embedding_size,input_length=input_shape,
-                                                     trainable=True))
-            self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same', kernel_regularizer=l2(0.0001)))
+            self.model.add(tf.keras.layers.Embedding(self.vocab_size, self.embedding_size,
+                                                     input_length=self.max_sequence_len, trainable=True))
+            self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same',
+                                  kernel_regularizer=l2(0.0001)))
 
         # self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same', input_shape=input_shape))
         # La capa superior se añade si los embeddings son los de fasttext, sino la capa de abajo
         # self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same'))
         self.model.add(Dropout(0.3))
+        self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same',
+                              kernel_regularizer=l2(0.0001)))
         self.model.add(MaxPool1D(pool_size=self.pool_size))
-        self.model.add(Bidirectional(LSTM(self.lstm_units, activation='relu', return_sequences=True, kernel_regularizer=l2(0.0001))))
+        self.model.add(Dropout(0.3))
+        self.model.add(Bidirectional(LSTM(self.lstm_units, activation='relu', return_sequences=True,
+                                          kernel_regularizer=l2(0.0001))))
+        self.model.add(Dropout(0.3))
+        self.model.add(Bidirectional(LSTM(self.lstm_units, activation='relu', return_sequences=True,
+                                          kernel_regularizer=l2(0.0001))))
         self.model.add(Dropout(0.3))
         self.model.add(Bidirectional(LSTM(self.lstm_units, activation='relu', kernel_regularizer=l2(0.0001))))
         self.model.add(Dropout(0.3))
+        # self.model.add(GlobalMaxPool1D())
         self.model.add(Dense(256, activation='relu', kernel_regularizer=l2(0.0001)))
+        self.model.add(Dropout(0.3))
         self.model.add(Dense(2, activation='softmax'))
 
-        self.model.compile(loss=BinaryCrossentropy(),
+        self.model.compile(loss=CategoricalCrossentropy(),
                            optimizer=self.optimizer,
                            metrics=['accuracy'])
 
         print(self.model.summary())
-
-
 
     def fit(self, with_validation=False):
         """Fit the model using the keras fit function.
@@ -102,16 +108,18 @@ class CNNRNNModel(BaseModel):
         print(self.y_train)
         if not with_validation:
             self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs, verbose=1,
-                           callbacks=self.callbacks, shuffle=True) #, class_weight=weights)
+                           callbacks=self.callbacks, shuffle=True, class_weight=weights)
         else:
             self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs, verbose=1,
-                           callbacks=self.callbacks, shuffle=True, validation_data=(self.X_test, self.y_test), class_weight=weights)
+                           callbacks=self.callbacks, shuffle=True, validation_data=(self.X_dev, self.y_dev),
+                           class_weight=weights)
         print('Salgo de fit')
 
-
+    """
     def predict(self):
-        """Make the prediction for the test/dev data. It uses the data from the own class.
-        """
+    """
+    # Make the prediction for the test/dev data. It uses the data from the own class.
+    """
         # Actually it works as a test function to prove that the code is working.
         print('TEST SET')
         preds = self.model.predict(self.X_test, batch_size=self.batch_size, verbose=0)
@@ -129,41 +137,4 @@ class CNNRNNModel(BaseModel):
         print(preds_dev)
         print(classification_report(dev_true, preds_dev))
         print('Accuracy: ', accuracy_score(dev_true, preds_dev))
-
-
-    """
-    # Code for future if needed.
-    def encode_text(self, text):
-        self.encoder = tfds.features.text.TokenTextEncoder(text)
-
-    def encode(self, text_tensor, label):
-        encoded_text =self.encoder.encode(text_tensor.numpy())
-        return encoded_text, label
-
-    def encode_map_fn(self, text, label):
-        pass
-
-    def generate_vocabulary(self, text):
-        min_count = 5
-        flat_words = []
-        for sentence in text:
-            flat_words += sentence
-
-        counts = Counter(list(flat_words))
-        counts = pd.DataFrame(counts.most_common())
-        counts.columns = ['word', 'count']
-        counts = counts[counts['count'] > min_count]
-
-        vocab = pd.Series(range(len(counts)), index=counts['word']).sort_index()
-
-        self.vocab_size = vocab
-        filtered_text = []
-        for doc in text:
-            doc = [word for word in doc if word in vocab.index]
-            if len(doc):
-                filtered_text.append(doc)
-        text = filtered_text
-
-        for i, doc in enumerate(text):
-            doc[i] = [vocab.loc[word] for word in doc]
     """

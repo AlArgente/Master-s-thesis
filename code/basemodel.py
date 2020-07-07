@@ -1,14 +1,18 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+import tensorflow_datasets as tfds
 from tensorflow.keras.layers import Layer
 from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.preprocessing.text import Tokenizer
 from factory_embeddings import FactoryEmbeddings
 from abc import abstractmethod
+from tensorflow.keras.optimizers import Adam, RMSprop
+from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
 
-class BaseModel(Model):
+
+class BaseModel(Layer):
 
     def __init__(self, max_len, path_train, path_test, path_dev, epochs, learning_rate, optimizer,
                  load_embeddings, batch_size=32, embedding_size='300', emb_type='fasttext',
@@ -44,6 +48,7 @@ class BaseModel(Model):
         }
         self.optimizer = self.OPTIMIZERS[optimizer]
         self.load_embeddings = load_embeddings
+        self.model = None
 
     @property
     def vocab_size(self):
@@ -84,6 +89,7 @@ class BaseModel(Model):
         word_seq_train = tokenizer.texts_to_sequences(self.train['text'])
         word_seq_test = tokenizer.texts_to_sequences(self.test['text'])
         word_seq_dev = tokenizer.texts_to_sequences(self.dev['text'])
+
         if not self.load_embeddings:
             word_index = tokenizer.word_index
 
@@ -117,17 +123,17 @@ class BaseModel(Model):
         new_words_dev = 0
         for sentence in self.train['text_stem']:
             for word in sentence:
-                if self._vocabulary.get(word) == None:
+                if self._vocabulary.get(word) is None:
                     self._vocabulary[word] = self._vocabulary['NEWWORD']
-                    new_words_train+=1
+                    new_words_train += 1
         for sentence in self.test['text_stem']:
             for word in sentence:
-                if self._vocabulary.get(word) == None:
+                if self._vocabulary.get(word) is None:
                     self._vocabulary[word] = self._vocabulary['NEWWORD']
                     new_words_test += 1
         for sentence in self.dev['text_stem']:
             for word in sentence:
-                if self._vocabulary.get(word) == None:
+                if self._vocabulary.get(word) is None:
                     self._vocabulary[word] = self._vocabulary['NEWWORD']
                     new_words_dev += 1
         self._vocab_size = len(self.vocabulary)
@@ -135,6 +141,7 @@ class BaseModel(Model):
         self._vocab_index = list(self._vocabulary.values())
 
     def prepare_data(self):
+        # TODO: Convert from pandas DataFrame to tensorflow dataset.
         print('Loading data')
         self.load_data()
         print('Loading Vocabulary and Embeddings Matrix')
@@ -151,3 +158,27 @@ class BaseModel(Model):
             - with_validation (bool): If True test data is applied as validation set
         """
         pass
+
+    def predict(self):
+        """Make the prediction for the test/dev data. It uses the data from the own class.
+        """
+        # Actually it works as a test function to prove that the code is working.
+        print('TEST SET')
+        preds = self.model.predict(self.X_test, batch_size=self.batch_size, verbose=0)
+        preds = *map(lambda x: round(max(x)), preds),
+        # print(preds)
+        y_true = *map(lambda x: round(max(x)), self.y_test),
+        """
+        for i in range(len(preds)):
+            if self.y_test[i] != preds[i]:
+                print('Y_true: ' + str(self.y_test[i]) + '. Y_pred: ' + str(preds[i]))
+        """
+        # print(classification_report(y_true, preds))
+        print('Roc auc score: ', roc_auc_score(y_true, preds))
+        print('Accuracy: ', accuracy_score(y_true, preds))
+        print('DEVELOPMENT SET')
+        dev_true = *map(lambda x: round(max(x)), self.y_test),
+        preds_dev = self.model.predict(self.X_dev, batch_size=self.batch_size, verbose=0)
+        preds_dev = *map(lambda x: round(max(x)), preds_dev),
+        print('Roc auc score: ', roc_auc_score(dev_true, preds_dev))
+        print('Accuracy: ', accuracy_score(dev_true, preds_dev))
