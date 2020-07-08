@@ -19,7 +19,7 @@ class CNNRNNModel(BaseModel):
     '''
 
     def __init__(self, batch_size, epochs, filters, kernel_size, optimizer, max_sequence_len, lstm_units,
-                 path_train, path_test, path_dev, vocab_size, learning_rate=1e-3, pool_size=4,
+                 path_train, path_test, path_dev, vocab_size, learning_rate=1e-3, pool_size=4, rate=0.2,
                  embedding_size=300, max_len=1900, load_embeddings=True, buffer_size=3, emb_type='fasttext'):
         """Init function for the model.
         """
@@ -27,7 +27,7 @@ class CNNRNNModel(BaseModel):
                                           path_test=path_test, path_dev=path_dev, batch_size=batch_size,
                                           embedding_size=embedding_size, emb_type=emb_type, vocab_size=vocab_size,
                                           max_sequence_len=max_sequence_len, epochs=epochs, learning_rate=learning_rate,
-                                          optimizer=optimizer, load_embeddings=load_embeddings)
+                                          optimizer=optimizer, load_embeddings=load_embeddings, rate=rate)
         self.filters = filters
         self.kernel_size = kernel_size
         self.pool_size = pool_size
@@ -73,25 +73,31 @@ class CNNRNNModel(BaseModel):
         # self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same', input_shape=input_shape))
         # La capa superior se añade si los embeddings son los de fasttext, sino la capa de abajo
         # self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same'))
-        self.model.add(Dropout(0.3))
+        self.model.add(Dropout(self.rate))
+        """
         self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same',
                               kernel_regularizer=l2(0.0001)))
         self.model.add(MaxPool1D(pool_size=self.pool_size))
-        self.model.add(Dropout(0.3))
+        self.model.add(Dropout(self.rate))
+        """
         self.model.add(Bidirectional(LSTM(self.lstm_units, activation='relu', return_sequences=True,
                                           kernel_regularizer=l2(0.0001))))
-        self.model.add(Dropout(0.3))
+        self.model.add(Dropout(self.rate))
+        """
         self.model.add(Bidirectional(LSTM(self.lstm_units, activation='relu', return_sequences=True,
                                           kernel_regularizer=l2(0.0001))))
-        self.model.add(Dropout(0.3))
+        self.model.add(Dropout(self.rate))
+        """
         self.model.add(Bidirectional(LSTM(self.lstm_units, activation='relu', kernel_regularizer=l2(0.0001))))
-        self.model.add(Dropout(0.3))
+        self.model.add(Dropout(self.rate))
         # self.model.add(GlobalMaxPool1D())
+        """
         self.model.add(Dense(256, activation='relu', kernel_regularizer=l2(0.0001)))
-        self.model.add(Dropout(0.3))
+        self.model.add(Dropout(self.rate))
+        """
         self.model.add(Dense(2, activation='softmax'))
 
-        self.model.compile(loss=CategoricalCrossentropy(),
+        self.model.compile(loss=BinaryCrossentropy(),
                            optimizer=self.optimizer,
                            metrics=['accuracy'])
 
@@ -102,39 +108,25 @@ class CNNRNNModel(BaseModel):
         Arguments:
             - with_validation (bool): If True test data is applied as validation set
         """
-        print('ESTOY EN EL FIT')
-        weights = {0: 1, 1: 1}
-
-        print(self.y_train)
         if not with_validation:
             self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs, verbose=1,
-                           callbacks=self.callbacks, shuffle=True, class_weight=weights)
+                           callbacks=self.callbacks, shuffle=True, class_weight=self.class_weights)
         else:
             self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs, verbose=1,
                            callbacks=self.callbacks, shuffle=True, validation_data=(self.X_dev, self.y_dev),
-                           class_weight=weights)
+                           class_weight=self.class_weights)
         print('Salgo de fit')
 
-    """
-    def predict(self):
-    """
-    # Make the prediction for the test/dev data. It uses the data from the own class.
-    """
-        # Actually it works as a test function to prove that the code is working.
-        print('TEST SET')
-        preds = self.model.predict(self.X_test, batch_size=self.batch_size, verbose=0)
-        y_true = list(self.y_test)
-        for i in range(len(preds)):
-            if y_true[i] != preds[i]:
-                print('Y_true: ' + str(y_true[i]) + '. Y_pred: ' + str(preds[i]))
-        print(classification_report(y_true, preds))
-        print(roc_auc_score(self.y_test, preds))
-        print('Accuracy: ', accuracy_score(y_true, preds))
-        print('DEVELOPMENT SET')
-        dev_true = list(self.y_dev)
-        dev_true = self.y_dev
-        preds_dev = self.model.predict(self.X_dev, batch_size=self.batch_size, verbose=0)
-        print(preds_dev)
-        print(classification_report(dev_true, preds_dev))
-        print('Accuracy: ', accuracy_score(dev_true, preds_dev))
-    """
+    def fit_as_tensors(self, with_validation=False):
+        """Fit the model using the keras fit function. The data must be loaded using the prepare_data_as_tensors
+        function.
+        Arguments:
+            - with_validation (bool): If True test data is applied as validation set
+        """
+        self.class_weights = None
+        if not with_validation:
+            self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
+                           class_weight=self.class_weights)
+        else:
+            self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
+                           class_weight=self.class_weights, validation_data=self.val_dataset)

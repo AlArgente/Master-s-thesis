@@ -9,6 +9,7 @@ import copy
 import nltk
 
 nltk.download('stopwords')
+nltk.download('punkt')
 from nltk import word_tokenize, sent_tokenize
 from nltk.corpus import stopwords
 from stop_words import get_stop_words
@@ -48,6 +49,27 @@ class Preprocessing:
         # Stem the data
         pdata_stem, pdata_join = Preprocessing.stemming(pdata)
         return pdata_stem, pdata_join
+
+    @staticmethod
+    def pipeline_simple(data):
+        '''Seconf pipeline of preprocessing. Preprocess all the data without embeddings.
+
+                Arguments:
+                    - data: data to preprocess
+                Returns:
+                    - pdata: data with sencences preprocesed
+                '''
+        # Safe copy from the data to preprocess
+        pdata = copy.deepcopy(data)
+        print('Preprocesado de las sentencias.')
+        # Tokenize the punctuation
+        pdata = Preprocessing.preprocess_all_sentences(pdata)
+        print('Conversión de contracciones.')
+        # Remove all the possible contractions
+        pdata = Preprocessing.remove_all_contractions(pdata)
+        print('Return pipeline simple')
+        return pdata
+
 
     @staticmethod
     def tokenize(text):

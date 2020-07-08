@@ -16,7 +16,7 @@ class BaseModel(Layer):
 
     def __init__(self, max_len, path_train, path_test, path_dev, epochs, learning_rate, optimizer,
                  load_embeddings, batch_size=32, embedding_size='300', emb_type='fasttext',
-                 vocabulary=None, vocab_size=None, max_sequence_len=None):
+                 vocabulary=None, vocab_size=None, max_sequence_len=None, rate=0.2):
         super(BaseModel).__init__()
         self._vocabulary = vocabulary
         self.max_len = max_len
@@ -49,6 +49,15 @@ class BaseModel(Layer):
         self.optimizer = self.OPTIMIZERS[optimizer]
         self.load_embeddings = load_embeddings
         self.model = None
+        self.pos = 5737
+        self.neg = 45557
+        self.total = 51294
+        self.weight_for_0 = (1 / self.neg) * (self.total) / 2.0
+        self.weight_for_1 = (1 / self.pos) * (self.total) / 2.0
+        self.class_weights = {0: self.weight_for_0, 1: self.weight_for_1}
+        print('Weight for class 0: {:.2f}'.format(self.weight_for_0))
+        print('Weight for class 1: {:.2f}'.format(self.weight_for_1))
+        self.rate = rate
 
     @property
     def vocab_size(self):
@@ -141,7 +150,6 @@ class BaseModel(Layer):
         self._vocab_index = list(self._vocabulary.values())
 
     def prepare_data(self):
-        # TODO: Convert from pandas DataFrame to tensorflow dataset.
         print('Loading data')
         self.load_data()
         print('Loading Vocabulary and Embeddings Matrix')
@@ -149,7 +157,18 @@ class BaseModel(Layer):
         print('Padding sentences')
         self.pad_sentences()
         print('Tras padding')
-        print(self.X_train[:20])
+        print(self.X_train[:1])
+
+    def prepare_data_as_tensors(self):
+        self.prepare_data()
+        print('Loading data as tensors')
+        # Load data as tensors
+        self.train_dataset = tf.data.Dataset.from_tensor_slices((self.X_train, self.y_train))
+        self.train_dataset = self.train_dataset.shuffle(len(self.X_train)).batch(self.batch_size)
+
+        self.val_dataset = tf.data.Dataset.from_tensor_slices((self.X_dev, self.y_dev))
+        self.val_dataset = self.val_dataset.shuffle(len(self.X_dev)).batch(self.batch_size)
+
 
     @abstractmethod
     def fit(self, with_validation=False):
@@ -159,26 +178,43 @@ class BaseModel(Layer):
         """
         pass
 
+    @abstractmethod
+    def fit_as_tensors(self, with_validation=False):
+        pass
+
     def predict(self):
         """Make the prediction for the test/dev data. It uses the data from the own class.
         """
         # Actually it works as a test function to prove that the code is working.
         print('TEST SET')
         preds = self.model.predict(self.X_test, batch_size=self.batch_size, verbose=0)
-        preds = *map(lambda x: round(max(x)), preds),
-        # print(preds)
-        y_true = *map(lambda x: round(max(x)), self.y_test),
+        real_preds = []
+        for p in preds:
+            if p[0] > p[1]:
+                real_preds.append(0)
+            else:
+                real_preds.append(1)
+        print(real_preds[:10])
+        y_true = []
+        for p in self.y_test:
+            if p[0] > p[1]:
+                y_true.append(0)
+            else:
+                y_true.append(1)
+        print(y_true[:10])
         """
         for i in range(len(preds)):
             if self.y_test[i] != preds[i]:
                 print('Y_true: ' + str(self.y_test[i]) + '. Y_pred: ' + str(preds[i]))
         """
-        # print(classification_report(y_true, preds))
-        print('Roc auc score: ', roc_auc_score(y_true, preds))
-        print('Accuracy: ', accuracy_score(y_true, preds))
+        print(classification_report(y_true, real_preds))
+        print('Roc auc score: ', roc_auc_score(y_true, real_preds))
+        print('Accuracy: ', accuracy_score(y_true, real_preds))
+        """
         print('DEVELOPMENT SET')
         dev_true = *map(lambda x: round(max(x)), self.y_test),
         preds_dev = self.model.predict(self.X_dev, batch_size=self.batch_size, verbose=0)
         preds_dev = *map(lambda x: round(max(x)), preds_dev),
         print('Roc auc score: ', roc_auc_score(dev_true, preds_dev))
         print('Accuracy: ', accuracy_score(dev_true, preds_dev))
+        """

@@ -96,7 +96,14 @@ class TransformerEncoder(BaseModel):
             tf.TensorShape(shape=(None, None), dtype=tf.int64),
             tf.TensorShape(shape=(None, None), dtype=tf.int64),
         ]
-
+        start = time.time()
+        training_stats = []
         for epoch in range(self.epochs):
-            start = time.time()
+            print('')
+            print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, epochs))
+            print('Training...')
+            t0 = time.time()
+            total_train_loss = 0
+            self.model.train()
+
 
