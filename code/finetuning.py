@@ -7,6 +7,7 @@ from transformers import TFAlbertForSequenceClassification
 from transformers import AdamW, get_linear_schedule_with_warmup
 import torch
 import time
+import datetime
 from torch.utils.data import TensorDataset, random_split, DataLoader, RandomSampler, SequentialSampler
 from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
 
@@ -33,7 +34,7 @@ class FineTuningModel:
         self.device = torch.device('cpu')
         if self.model_to_use.lower() == 'bert':
             print('Se usará Bert')
-            self.tokenizer = BertTokenizer.from_pretrained('bert-large-uncased', do_lower_case=True)
+            self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
         elif self.model_to_use.lower() == 'albert':
             print('Se usará Albert')
             self.tokenizer = AlbertTokenizer.from_pretrained('albert-base-v1', do_lower_case=False)
@@ -107,7 +108,7 @@ class FineTuningModel:
 
     def call(self):
         if self.model_to_use.lower() == 'bert':
-            self.model = BertForSequenceClassification.from_pretrained('bert-large-uncased', num_labels=2,
+            self.model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=2,
                                                                        output_attentions=False,
                                                                        output_hidden_states=False)
             print('Bert Cargado.')
