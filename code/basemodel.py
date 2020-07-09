@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from matplotlib import pyplot as plt
 import tensorflow as tf
 import tensorflow_datasets as tfds
 from tensorflow.keras.layers import Layer
@@ -8,6 +9,9 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.preprocessing.text import Tokenizer
 from factory_embeddings import FactoryEmbeddings
 from abc import abstractmethod
+import tensorflow_docs as tfdocs
+import tensorflow_docs.modeling
+import tensorflow_docs.plots
 from tensorflow.keras.optimizers import Adam, RMSprop
 from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
 
@@ -59,6 +63,19 @@ class BaseModel(Layer):
         print('Weight for class 0: {:.2f}'.format(self.weight_for_0))
         print('Weight for class 1: {:.2f}'.format(self.weight_for_1))
         self.rate = rate
+        self.METRICS = [
+            # tf.keras.metrics.TruePositives(name='tp'),
+            # tf.keras.metrics.FalsePositives(name='fp'),
+            # tf.keras.metrics.TrueNegatives(name='tn'),
+            # tf.keras.metrics.FalseNegatives(name='fn'),
+            tf.keras.metrics.BinaryAccuracy(name='accuracy'),
+            tf.keras.metrics.Precision(name='precision'),
+            tf.keras.metrics.Recall(name='recall'),
+            tf.keras.metrics.AUC(name='auc')
+        ]
+        self.initial_bias = abs(np.log([self.pos/self.neg]))
+        self.initial_bias = self.pos / self.total
+        self.history = None
 
     @property
     def vocab_size(self):
@@ -98,9 +115,9 @@ class BaseModel(Layer):
         tokenizer = Tokenizer(num_words=self.max_len, lower=True, char_level=False)
         full_text = pd.concat([self.train.text, self.test.text, self.dev.text])
         tokenizer.fit_on_texts(full_text)
-        word_seq_train = tokenizer.texts_to_sequences(self.train['text'])
-        word_seq_test = tokenizer.texts_to_sequences(self.test['text'])
-        word_seq_dev = tokenizer.texts_to_sequences(self.dev['text'])
+        word_seq_train = tokenizer.texts_to_sequences(self.train['text_join'])
+        word_seq_test = tokenizer.texts_to_sequences(self.test['text_join'])
+        word_seq_dev = tokenizer.texts_to_sequences(self.dev['text_join'])
 
         self.word_index = tokenizer.word_index
 
@@ -234,3 +251,9 @@ class BaseModel(Layer):
         print('Roc auc score: ', roc_auc_score(dev_true, preds_dev))
         print('Accuracy: ', accuracy_score(dev_true, preds_dev))
         """
+
+    def save_plot_history(self):
+        self.plotter = tfdocs.plots.HistoryPlotter(metric='binary_crossentropy', smoothing_std=10)
+        self.plotter.plot(self.history)
+        plt.savefig('historial_enttrenamiento.png')
+

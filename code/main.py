@@ -93,6 +93,8 @@ def main():
         model.fit_as_tensors(with_validation=True)
         print('Previo a predict')
         model.predict()
+        # print('Se guarda historial del loss:')
+        # model.save_plot_history()
 
     elif args['mode'] == 4:
         config = ModelConfig.FineTuning.value

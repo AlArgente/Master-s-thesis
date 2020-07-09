@@ -10,7 +10,7 @@ class ModelConfig(Enum):
         'filters': 64,
         'kernel_size': 5,
         'optimizer': 'adam',
-        'max_sequence_len': 500,
+        'max_sequence_len': 315, # Mejor resultado 300, segundo mejor 400
         'lstm_units': 25,
         'path_train' : '../data/train_preprocessed.tsv',
         'path_test': '../data/test_preprocessed.tsv',

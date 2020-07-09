@@ -34,12 +34,12 @@ class CNNRNNModel(BaseModel):
         self.lstm_units = lstm_units
         self.buffer_size = buffer_size
         self.callbacks = None
-        self.checkpoint_filepath = '../checkpoints/checkpoint'
+        self.checkpoint_filepath = './checkpoints/checkpoint.cpk'
         self.model_save = ModelCheckpoint(filepath=self.checkpoint_filepath, save_weights_only=True, mode='max',
-                                          monitor='val_acc', save_best_only=True)
+                                          monitor='val_accuracy', save_best_only=True)
         self.reduce_lr = ReduceLROnPlateau(monitor='val_loss', patience=2, factor=0.2, verbose=0, mode='auto',
                                            min_lr=(self.learning_rate/100))
-        self.callbacks = [self.reduce_lr, self.model_save]
+        self.callbacks = [self.model_save]
         # self.callbacks = None
 
     def call(self):
@@ -99,11 +99,11 @@ class CNNRNNModel(BaseModel):
         self.model.add(Dense(256, activation='relu', kernel_regularizer=l2(0.0001)))
         self.model.add(Dropout(self.rate))
         """
-        self.model.add(Dense(2, activation='softmax'))
+        self.model.add(Dense(2, activation='softmax')) # bias_initializer=self.initial_bias
 
         self.model.compile(loss=BinaryCrossentropy(),
                            optimizer=self.optimizer,
-                           metrics=['accuracy'])
+                           metrics=self.METRICS)
 
         self.model.summary()
 
@@ -113,10 +113,10 @@ class CNNRNNModel(BaseModel):
             - with_validation (bool): If True test data is applied as validation set
         """
         if not with_validation:
-            self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs, verbose=1,
+            self.history = self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs, verbose=1,
                            callbacks=self.callbacks, shuffle=True, class_weight=self.class_weights)
         else:
-            self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs, verbose=1,
+            self.history = self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs, verbose=1,
                            callbacks=self.callbacks, shuffle=True, validation_data=(self.X_dev, self.y_dev),
                            class_weight=self.class_weights)
         print('Salgo de fit')
@@ -128,8 +128,8 @@ class CNNRNNModel(BaseModel):
             - with_validation (bool): If True test data is applied as validation set
         """
         if not with_validation:
-            self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
+            self.history = self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
                            class_weight=self.class_weights)
         else:
-            self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
+            self.history = self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
                            class_weight=self.class_weights, validation_data=self.val_dataset)
