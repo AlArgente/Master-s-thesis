@@ -38,7 +38,7 @@ class CNNRNNModel(BaseModel):
         self.model_save = ModelCheckpoint(filepath=self.checkpoint_filepath, save_weights_only=True, mode='max',
                                           monitor='val_acc', save_best_only=True)
         self.reduce_lr = ReduceLROnPlateau(monitor='val_loss', patience=2, factor=0.2, verbose=0, mode='auto',
-                                           min_lr=self.learning_rate)
+                                           min_lr=(self.learning_rate/100))
         self.callbacks = [self.reduce_lr, self.model_save]
         # self.callbacks = None
 

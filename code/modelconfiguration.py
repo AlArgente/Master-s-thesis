@@ -10,8 +10,8 @@ class ModelConfig(Enum):
         'filters': 64,
         'kernel_size': 5,
         'optimizer': 'adam',
-        'max_sequence_len': 200,
-        'lstm_units': 75,
+        'max_sequence_len': 500,
+        'lstm_units': 25,
         'path_train' : '../data/train_preprocessed.tsv',
         'path_test': '../data/test_preprocessed.tsv',
         'path_dev': '../data/dev_preprocessed.tsv',
@@ -22,7 +22,7 @@ class ModelConfig(Enum):
         'max_len' : 100000,
         'load_embeddings' : True,
         'buffer_size' : 3,
-        'emb_type' : 'fasttext',
+        'emb_type' : 'glove',
         'rate': 0.2
     }
 
@@ -36,6 +36,6 @@ class ModelConfig(Enum):
         'optimizer': 'adam',
         'learning_rate': 5e-5,
         'eps' : 1e-8,
-        'model_to_use' : 'BERT',
+        'model_to_use' : 'Distilbert',
         'tr_size': 0.8,
     }

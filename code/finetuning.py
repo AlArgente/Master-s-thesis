@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from transformers import BertForSequenceClassification, AlbertForSequenceClassification, ElectraForSequenceClassification
 from transformers import DistilBertForSequenceClassification
 from transformers import BertTokenizer, AlbertTokenizer, ElectraTokenizer, DistilBertTokenizer
@@ -154,7 +155,8 @@ class FineTuningModel:
             print('Training...')
             t0 = time.time()
             total_train_loss = 0
-            # Put the model into training mode. Don't be mislead--the call to `train` just changes the *mode*, it doesn't *perform* the training.
+            # Put the model into training mode. Don't be mislead--the call to `train` just changes the *mode*,
+            # it doesn't *perform* the training.
 
             # `dropout` and `batchnorm` layers behave differently during training
 
@@ -192,7 +194,7 @@ class FineTuningModel:
                 # For our useage here, it returns the loss (because we provided labels) and the 'logits'--the model
                 # outputs prior to activation.
                 loss, logit = self.model(b_input_ids,
-                                         token_type_ids=None,
+                                         # token_type_ids=None,
                                          attention_mask=b_input_mask,
                                          labels=b_labels)
                 total_train_loss += loss.item()

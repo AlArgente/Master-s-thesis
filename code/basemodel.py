@@ -44,7 +44,7 @@ class BaseModel(Layer):
         self.learning_rate = learning_rate
         self.init_learning_rate = 0.0001
         self.OPTIMIZERS = {
-            'adam': Adam(beta_1=0.9, beta_2=0.98, epsilon=1e-9),
+            'adam': Adam(learning_rate=self.learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9),
             'rmsprop': RMSprop(learning_rate == self.learning_rate)
         }
         self.optimizer = self.OPTIMIZERS[optimizer]
@@ -218,7 +218,6 @@ class BaseModel(Layer):
                 y_true.append(0)
             else:
                 y_true.append(1)
-        print(y_true[:10])
         """
         for i in range(len(preds)):
             if self.y_test[i] != preds[i]:
