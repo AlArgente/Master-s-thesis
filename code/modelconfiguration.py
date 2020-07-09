@@ -12,17 +12,18 @@ class ModelConfig(Enum):
         'optimizer': 'adam',
         'max_sequence_len': 200,
         'lstm_units': 75,
-        'path_train' : '../data/train_balanced.tsv',
-        'path_test': '../data/test_balanced.tsv',
-        'path_dev': '../data/dev_balanced.tsv',
+        'path_train' : '../data/train_preprocessed.tsv',
+        'path_test': '../data/test_preprocessed.tsv',
+        'path_dev': '../data/dev_preprocessed.tsv',
         'vocab_size' : None,
-        'learning_rate': 3e-5,
+        'learning_rate': 5e-5,
         'pool_size': 2,
         'embedding_size': 300,
         'max_len' : 100000,
         'load_embeddings' : True,
         'buffer_size' : 3,
-        'emb_type' : 'glove'
+        'emb_type' : 'fasttext',
+        'rate': 0.2
     }
 
     FineTuning = {

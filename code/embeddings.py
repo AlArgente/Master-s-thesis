@@ -10,6 +10,7 @@ class Embeddings(ABC):
         self.d = 300
         self.__vocabulary = {}
         self.__embeddings_matrix = []
+        self.embeddings = {}
 
     @property
     def vocabulary(self):
@@ -18,6 +19,10 @@ class Embeddings(ABC):
     @property
     def embeddings_matrix(self):
         return self.__embeddings_matrix
+
+    @property
+    def embeddings_full(self):
+        return self.embeddings
 
     @abstractmethod
     def load_vectors(self, fname):
@@ -67,7 +72,7 @@ class GloveEmbeddings(Embeddings):
     """
     def __init__(self):
         super(GloveEmbeddings, self).__init__()
-        self.load_vectors()
+        self.load_embeddings()
         print('Embeddings cargados')
 
     def load_vectors(self, fname='../glove.6B.300d.txt'):
@@ -90,13 +95,25 @@ class GloveEmbeddings(Embeddings):
                 # Add the embedding to the matrix of embeddings
                 self.embeddings_matrix.append(vec)
 
+    def load_embeddings(self, fname='../glove.6B.300d.txt'):
+        print('Loading Glove Embeddings')
+        # Open the Glove file
+        with open(fname, 'r') as f:
+            # Read all the lines
+            lines = f.readlines()
+            # Create the embeddings
+            for line in lines:
+                token = line.split(' ')
+                self.embeddings[token[0]] = np.array(token[1:], dtype=np.float32)
+
+
 
 class FTEmbeddings(Embeddings):
     """Class to load the FastText embeddings
     """
     def __init__(self):
         super(FTEmbeddings, self).__init__()
-        self.load_vectors()
+        self.load_embeddings()
         print('Embeddings cargados')
 
     def load_vectors(self, fname='../wiki-news-300d-1M.vec'):
@@ -117,3 +134,10 @@ class FTEmbeddings(Embeddings):
                 self.vocabulary[tokens[0]] = len(self.vocabulary)
                 # Add the embedding to the matrix of embeddings as a np.array
                 self.embeddings_matrix.append(np.array(tokens[1:]))
+
+    def load_embeddings(self, fname='../wiki-news-300d-1M.vec'):
+        fin = io.open(fname, 'r', encoding='utf-8', newline='\n', errors='ignore')
+        print('Loading FastText Embeddings.')
+        for line in fin:
+            tokens = line.rstrip().split(' ')
+            self.embeddings[tokens[0]] = np.array(tokens[1:], dtype=np.float32)

@@ -42,8 +42,9 @@ class BaseModel(Layer):
         self._vocab_index = None
         self.epochs = epochs
         self.learning_rate = learning_rate
+        self.init_learning_rate = 0.0001
         self.OPTIMIZERS = {
-            'adam': Adam(learning_rate=self.learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9),
+            'adam': Adam(beta_1=0.9, beta_2=0.98, epsilon=1e-9),
             'rmsprop': RMSprop(learning_rate == self.learning_rate)
         }
         self.optimizer = self.OPTIMIZERS[optimizer]
@@ -95,18 +96,18 @@ class BaseModel(Layer):
         First it tokenize the data with tensorflow tokenizer and then apply the pad_sequences function
         """
         tokenizer = Tokenizer(num_words=self.max_len, lower=True, char_level=False)
+        full_text = pd.concat([self.train.text, self.test.text, self.dev.text])
+        tokenizer.fit_on_texts(full_text)
         word_seq_train = tokenizer.texts_to_sequences(self.train['text'])
         word_seq_test = tokenizer.texts_to_sequences(self.test['text'])
         word_seq_dev = tokenizer.texts_to_sequences(self.dev['text'])
 
-        if not self.load_embeddings:
-            word_index = tokenizer.word_index
+        self.word_index = tokenizer.word_index
 
         self.X_train = pad_sequences(word_seq_train, maxlen=self.max_sequence_len)
         self.X_test = pad_sequences(word_seq_test, maxlen=self.max_sequence_len)
         self.X_dev = pad_sequences(word_seq_dev, maxlen=self.max_sequence_len)
         self.y_train = tf.keras.utils.to_categorical(self.train['label'], num_classes=2)
-        print(self.y_train.shape)
         # self.y_train = self.train['label'].astype('category')
         self.y_test = tf.keras.utils.to_categorical(self.test['label'], num_classes=2)
         # self.y_test = self.test['label'].astype('category')
@@ -125,11 +126,26 @@ class BaseModel(Layer):
         """
         self.emb = FactoryEmbeddings()
         self.emb.load_embeddings(self.emb_type)
-        self._vocabulary = self.emb.embeddings.vocabulary
-        self.embeddings_matrix = np.asarray(self.emb.embeddings.embeddings_matrix, dtype=np.float32)
-        new_words_train = 0
-        new_words_test = 0
-        new_words_dev = 0
+        # self._vocabulary = self.emb.embeddings.vocabulary
+        # self.aux_embeddings_matrix = np.asarray(self.emb.embeddings.embeddings_matrix, dtype=np.float32)
+        embeddings = self.emb.embeddings.embeddings_full
+        words_not_found = []
+        self.nb_words = min(self.max_len, len(self.word_index))
+        # Se crea la matriz de embeddings
+        self.embeddings_matrix = np.zeros((self.nb_words, self.embedding_size))
+
+        for word, i in self.word_index.items():
+            if i >= self.nb_words:
+                continue
+            embedding_vector = embeddings.get(word)
+            if embedding_vector is not None and len(embedding_vector) > 0:
+                self.embeddings_matrix[i] = embedding_vector
+            else:
+                words_not_found.append(word)
+        print('Total number of null words: %d'  % np.sum(np.sum(self.embeddings_matrix, axis=1) == 0))
+
+        """
+        # TODO: Probablemente a borrar
         for sentence in self.train['text_stem']:
             for word in sentence:
                 if self._vocabulary.get(word) is None:
@@ -148,15 +164,16 @@ class BaseModel(Layer):
         self._vocab_size = len(self.vocabulary)
         self.max_len = self._vocab_size
         self._vocab_index = list(self._vocabulary.values())
+        """
 
     def prepare_data(self):
         print('Loading data')
         self.load_data()
-        print('Loading Vocabulary and Embeddings Matrix')
-        self.create_embeddings_matrix()
         print('Padding sentences')
         self.pad_sentences()
         print('Tras padding')
+        print('Loading Vocabulary and Embeddings Matrix')
+        self.create_embeddings_matrix()
         print(self.X_train[:1])
 
     def prepare_data_as_tensors(self):

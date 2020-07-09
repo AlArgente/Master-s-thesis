@@ -85,7 +85,7 @@ def main():
                             embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
                             pool_size=config['pool_size'], path_train=config['path_train'],
                             path_test=config['path_test'], path_dev=config['path_dev'], emb_type=config['emb_type'],
-                            buffer_size=config['buffer_size'])
+                            buffer_size=config['buffer_size'], rate=config['rate'])
         model.prepare_data_as_tensors()
         print('Building the model.')
         model.call()

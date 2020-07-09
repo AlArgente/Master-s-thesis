@@ -34,13 +34,13 @@ class CNNRNNModel(BaseModel):
         self.lstm_units = lstm_units
         self.buffer_size = buffer_size
         self.callbacks = None
-        self.checkpoint_filepath = './checkpoints/checkpoint'
+        self.checkpoint_filepath = '../checkpoints/checkpoint'
         self.model_save = ModelCheckpoint(filepath=self.checkpoint_filepath, save_weights_only=True, mode='max',
                                           monitor='val_acc', save_best_only=True)
-        self.reduce_lr = ReduceLROnPlateau(monitor='val_loss', patience=10, factor=0.2, verbose=0, mode='auto',
-                                           min_lr=1e-5)
-        # self.callbacks = [self.reduce_lr, self.model_save]
-        self.callbacks = None
+        self.reduce_lr = ReduceLROnPlateau(monitor='val_loss', patience=2, factor=0.2, verbose=0, mode='auto',
+                                           min_lr=self.learning_rate)
+        self.callbacks = [self.reduce_lr, self.model_save]
+        # self.callbacks = None
 
     def call(self):
         """Build the model with all the layers.
@@ -53,8 +53,12 @@ class CNNRNNModel(BaseModel):
         self.model = Sequential()
         if self.load_embeddings:
             # Load fasttext or glove embeddings and use it to train the model
+            # self.model.add(
+                # tf.keras.layers.Embedding(self.embeddings_matrix.shape[0], self.embeddings_matrix.shape[1],
+                #                          weights=[self.embeddings_matrix], input_length=self.max_sequence_len,
+                #                          trainable=False))
             self.model.add(
-                tf.keras.layers.Embedding(self.embeddings_matrix.shape[0], self.embeddings_matrix.shape[1],
+                tf.keras.layers.Embedding(self.nb_words, self.embedding_size,
                                           weights=[self.embeddings_matrix], input_length=self.max_sequence_len,
                                           trainable=False))
             self.model.add(
@@ -101,7 +105,7 @@ class CNNRNNModel(BaseModel):
                            optimizer=self.optimizer,
                            metrics=['accuracy'])
 
-        print(self.model.summary())
+        self.model.summary()
 
     def fit(self, with_validation=False):
         """Fit the model using the keras fit function.
@@ -123,7 +127,6 @@ class CNNRNNModel(BaseModel):
         Arguments:
             - with_validation (bool): If True test data is applied as validation set
         """
-        self.class_weights = None
         if not with_validation:
             self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
                            class_weight=self.class_weights)
