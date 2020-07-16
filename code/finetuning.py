@@ -9,7 +9,7 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 import torch
 import time
 import datetime
-from transformers import trainer, trainer_tf
+from transformers import TrainingArguments, Trainer, TFTrainer
 from torch.utils.data import TensorDataset, random_split, DataLoader, RandomSampler, SequentialSampler
 from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
 
@@ -21,7 +21,7 @@ class FineTuningModel:
     here I fisrt I will use PyTorch models.
     """
     def __init__(self, path_train, path_test, path_dev, epochs, max_sequence_len, batch_size, optimizer, tr_size = 0.8,
-                 learning_rate = 5e-5, eps = 1e-8, model_to_use='bert'):
+                 learning_rate = 5e-5, eps = 1e-8, model_to_use='bert', api='tf'):
         self.path_train = path_train
         self.path_test = path_test
         self.path_dev = path_dev
@@ -34,6 +34,7 @@ class FineTuningModel:
         self.epsilon = eps
         self.model_to_use = model_to_use
         self.device = torch.device('cpu')
+        self.api = api
         if self.model_to_use.lower() == 'bert':
             print('Se usará Bert')
             self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
@@ -54,6 +55,11 @@ class FineTuningModel:
     def load_data(self):
         """Load the 3 DataFrames, train-test-dev. The data here will be preprocessed, previously tokenized,
         stopwords deleted and stem.
+        """
+        pass
+
+    def __load_data_torch(self):
+        """Function to load
         """
         self.data_train = pd.read_csv(self.path_train, sep='\t')
         self.data_train.loc[self.data_train['label'] == -1, 'label'] = 0
@@ -76,7 +82,7 @@ class FineTuningModel:
         self.dataset = TensorDataset(self.x_train_inputs_ids, self.x_train_attention_mask, self.y_train)
 
         train_size = int(0.8 * len(self.dataset))
-        val_size = len(self.dataset)- train_size
+        val_size = len(self.dataset) - train_size
         lengths = [train_size, val_size]
         self.train_dataset, self.val_dataset = random_split(dataset=self.dataset, lengths=[train_size, val_size])
 
@@ -107,6 +113,19 @@ class FineTuningModel:
             sampler=self.dev_sampler,
             batch_size=self.batch_size
         )
+
+    def __load_data_tf(self):
+        self.train = pd.read_csv(self.path_train, sep='\t')
+        self.train.loc[self.train['label'] == -1, 'label'] = 0
+        self.test = pd.read_csv(self.path_test, sep='\t')
+        self.test.loc[self.test['label'] == -1, 'label'] = 0
+        self.dev = pd.read_csv(self.path_dev, sep='\t')
+        self.dev.loc[self.dev['label'] == -1, 'label'] = 0
+        self.train_dataset = tf.data.Dataset.from_tensor_slices((self.X_train, self.y_train))
+        self.train_dataset = self.train_dataset.shuffle(len(self.X_train)).batch(self.batch_size)
+
+        self.val_dataset = tf.data.Dataset.from_tensor_slices((self.X_dev, self.y_dev))
+        self.val_dataset = self.val_dataset.shuffle(len(self.X_dev)).batch(self.batch_size)
 
     def call(self):
         if self.model_to_use.lower() == 'bert':
@@ -412,3 +431,31 @@ class FineTuningModel:
             self.y_train = torch.tensor(self.y_train)
 
         return inputs_ids, attention_mask
+
+
+    def fit_trainer(self):
+        self.training_args = TrainingArguments(
+            output_dir='./results',
+            num_train_epochs=self.epochs,
+            per_device_train_batch_size=self.batch_size,
+            per_device_eval_batch_size=self.batch_size,
+            warmup_steps=0,
+            weight_decay=0.01,
+            logging_dir=None
+        )
+
+        self.trainer = Trainer(
+            model=self.model,
+            args=self.training_args,
+            train_dataset=self.train_dataset,
+            eval_dataset=self.val_dataset
+        )
+
+        self.trainer.train()
+        self.trainer.evaluate()
+
+    def predict_trainer(self):
+        self.trainer.predict(self.test_dataset)
+
+    def TFfit_trainer(self):
+        pass

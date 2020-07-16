@@ -28,6 +28,10 @@ class Embeddings(ABC):
     def load_vectors(self, fname):
         pass
 
+    @abstractmethod
+    def load_embeddings(self, fname):
+        pass
+
     def calc_embeddings(self, text):
         # DEPRECATED: To delete
         """Function that apply the vector to get the embeddings from the text.
@@ -119,6 +123,8 @@ class FTEmbeddings(Embeddings):
     def load_vectors(self, fname='../wiki-news-300d-1M.vec'):
         """Function to load the Fasttext embeddings instead of random initialize them
         """
+        # To probe with 2M words instead of 1M
+        # fname = '../crawl-300d-2M.vec'
         fin = io.open(fname, 'r', encoding='utf-8', newline='\n', errors='ignore')
         print('Loading FastText')
         # Aux word for possibles new words out of our vocabulary
@@ -141,3 +147,25 @@ class FTEmbeddings(Embeddings):
         for line in fin:
             tokens = line.rstrip().split(' ')
             self.embeddings[tokens[0]] = np.array(tokens[1:], dtype=np.float32)
+
+
+
+class W2VEmbedding(Embeddings):
+    """Class to load the Word2Vec embeddings
+    """
+    def __init__(self):
+        super(W2VEmbedding, self).__init__()
+        self.load_embeddings()
+        print('Embeddings cargados')
+
+    def load_vectors(self, fname):
+        pass
+
+    def load_embeddings(self, fname=''):
+        # TODO: Check this function. Right now it's the same as FTEmnbedding's
+        print('Loading Word2Vec Embeddings.')
+        with open(fname, 'r') as fp:
+            file = fp.readlines()
+            for line in file:
+                tokens = line.rstrip().split(' ')
+                self.embeddings[tokens[0]] = np.array(tokens[1:], dtype=np.float32)

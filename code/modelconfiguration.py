@@ -10,11 +10,11 @@ class ModelConfig(Enum):
         'filters': 64,
         'kernel_size': 5,
         'optimizer': 'adam',
-        'max_sequence_len': 315, # Mejor resultado 300, segundo mejor 400
-        'lstm_units': 25,
-        'path_train' : '../data/train_preprocessed.tsv',
-        'path_test': '../data/test_preprocessed.tsv',
-        'path_dev': '../data/dev_preprocessed.tsv',
+        'max_sequence_len': 450, # Mejor resultado 300, segundo mejor 400 (pruebas: 280,315,320,330,350,500)
+        'lstm_units': 50,
+        'path_train' : '../data/train_raw.tsv',
+        'path_test': '../data/test_raw.tsv',
+        'path_dev': '../data/dev_raw.tsv',
         'vocab_size' : None,
         'learning_rate': 5e-5,
         'pool_size': 2,
@@ -23,19 +23,43 @@ class ModelConfig(Enum):
         'load_embeddings' : True,
         'buffer_size' : 3,
         'emb_type' : 'glove',
-        'rate': 0.2
+        'rate': 0.2,
+        'length_type': 'fixed'
     }
 
     FineTuning = {
         'batch_size' : 16,
         'epochs' : 6,
-        'path_train': '../data/train_balanced.tsv',
-        'path_test': '../data/test_balanced.tsv',
-        'path_dev': '../data/dev_balanced.tsv',
-        'max_sequence_len': 86,
+        'path_train': '../data/train_raw.tsv',
+        'path_test': '../data/test_raw.tsv',
+        'path_dev': '../data/dev_raw.tsv',
+        'max_sequence_len': 350,
         'optimizer': 'adam',
         'learning_rate': 5e-5,
         'eps' : 1e-8,
-        'model_to_use' : 'Distilbert',
+        'model_to_use' : 'BERT',
         'tr_size': 0.8,
+        'api': 'tf',
+        'length_type': 'mode'
+    }
+
+    BertConfig = {
+        'batch_size': 16,
+        'epochs': 3,
+        'optimizer': 'adam',
+        'max_sequence_len': 350,  # Mejor resultado 300, segundo mejor 400 (pruebas: 280,315,320,330,350,500)
+        'path_train': '../data/train_raw.tsv',
+        'path_test': '../data/test_raw.tsv',
+        'path_dev': '../data/dev_raw.tsv',
+        'vocab_size': None,
+        'learning_rate': 5e-5,
+        'pool_size': 2,
+        'embedding_size': 300,
+        'max_len': 100000,
+        'load_embeddings': True,
+        'buffer_size': 3,
+        'emb_type': 'fasttext',
+        'rate': 0.2,
+        'trainable': True,
+        'length_type': 'mean'
     }

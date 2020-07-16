@@ -7,7 +7,8 @@ import os
 import random
 
 from cnnrnn_model import CNNRNNModel
-from finetuning import FineTuningModel
+from finetune import FineTuningModel
+from bertmodel import BertModel
 from transformer_model import TransformerEncoder
 from preprocessing import Preprocessing
 import pandas as pd
@@ -24,7 +25,7 @@ def main():
     """
     start_time = time.time()
     random.seed(42)
-    os.environ["CUDA_VISIBLE_DEVICES"] = '-1'
+    # os.environ["CUDA_VISIBLE_DEVICES"] = '-1'
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=int, help='Preprocess or execute the data.', default=None)
     args = vars(parser.parse_args())  # Convert the arguments to a dict
@@ -66,7 +67,8 @@ def main():
                             embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
                             pool_size=config['pool_size'], path_train=config['path_train'],
                             path_test=config['path_test'], path_dev=config['path_dev'], emb_type=config['emb_type'],
-                            buffer_size=config['buffer_size'])
+                            buffer_size=config['buffer_size']
+                            )
         model.prepare_data()
         print('Building the model.')
         model.call()
@@ -85,7 +87,8 @@ def main():
                             embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
                             pool_size=config['pool_size'], path_train=config['path_train'],
                             path_test=config['path_test'], path_dev=config['path_dev'], emb_type=config['emb_type'],
-                            buffer_size=config['buffer_size'], rate=config['rate'])
+                            buffer_size=config['buffer_size'], rate=config['rate'], length_type=config['length_type']
+                            )
         model.prepare_data_as_tensors()
         print('Building the model.')
         model.call()
@@ -99,18 +102,36 @@ def main():
     elif args['mode'] == 4:
         config = ModelConfig.FineTuning.value
         model = FineTuningModel(path_train=config['path_train'], path_test=config['path_test'],
-                                path_dev=config['path_dev'], epochs=config['epochs'], max_sequence_len=config['max_sequence_len'],
-                                batch_size=config['batch_size'], optimizer=config['optimizer'], tr_size=config['tr_size'],
-                                learning_rate=config['learning_rate'], eps=config['eps'], model_to_use=config['model_to_use'])
+                                path_dev=config['path_dev'], epochs=config['epochs'],
+                                max_sequence_len=config['max_sequence_len'], batch_size=config['batch_size'],
+                                optimizer=config['optimizer'], tr_size=config['tr_size'],
+                                learning_rate=config['learning_rate'], eps=config['eps'],
+                                model_to_use=config['model_to_use'], api=config['api'], length_type=config['length_type']
+                                )
         print('Loading the data.')
         model.load_data()
         print('Creating the model.')
         model.call()
         print('Fitting the model.')
         model.fit()
+        # model.fit_trainer()
         print('Prediction')
+        # model.predict_trainer()
+    elif args['mode'] == 5:
+        config = ModelConfig.BertConfig.value
+        model = BertModel(max_len=config['max_len'], path_train=config['path_train'], path_test=config['path_test'],
+                          path_dev=config['path_dev'], epochs=config['epochs'], optimizer=config['optimizer'],
+                          load_embeddings=False, batch_size=config['batch_size'], max_sequence_len=config['max_sequence_len'],
+                          rate=config['rate'], learning_rate=config['learning_rate'], length_type=config['length_type']
+                          )
+        print('Loading the data.')
+        model.load_data()
+        print('Creating the model.')
+        model.call()
+        print('Fitting the model.')
+        model.fit(with_validation=True)
+        print('Predict the test set.')
         model.predict()
-
     else:
         print('No other mode implemented yed.')
 
