@@ -9,7 +9,9 @@ import tensorflow_datasets as tfds
 from tensorflow.keras import Model
 from basemodel import BaseModel
 from tensorflow.keras.losses import BinaryCrossentropy
-from sklearn.metrics import classification_report, accuracy_score, roc_auc_score, f1_score, precision_score, recall_score
+from sklearn.metrics import classification_report, accuracy_score, roc_auc_score, f1_score, precision_score, \
+    recall_score
+
 
 class BertModel(BaseModel):
     def __init__(self, max_len, path_train, path_test, path_dev, epochs, learning_rate, optimizer,
@@ -32,26 +34,23 @@ class BertModel(BaseModel):
         elif self.length_type == 'median':
             self.max_sequence_len = self.median_length
         elif self.length_type == 'max':
-            self.max_sequence_len = 512 # Max sequence len for BERT.
+            self.max_sequence_len = 512  # Max sequence len for BERT.
         # Prepare the layers for the model
         self.input_word_ids = tf.keras.layers.Input(shape=(self.max_sequence_len,), dtype=tf.int32,
-                                               name="input_word_ids")
+                                                    name="input_word_ids")
         self.input_masks = tf.keras.layers.Input(shape=(self.max_sequence_len,), dtype=tf.int32,
-                                           name="input_mask")
+                                                 name="input_mask")
         self.input_type_ids = tf.keras.layers.Input(shape=(self.max_sequence_len,), dtype=tf.int32,
-                                            name="input_type_ids")
+                                                    name="input_type_ids")
         self.bert_layer = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/1",
                                          trainable=self.trainable)
         self.vocab_file = self.bert_layer.resolved_object.vocab_file.asset_path.numpy()
         self.do_lower_case = self.bert_layer.resolved_object.do_lower_case.numpy()
         self.tokenizer = bert.bert_tokenization.FullTokenizer(self.vocab_file, self.do_lower_case)
         _, self.sequence_output = self.bert_layer([self.input_word_ids, self.input_masks,
-                                                                    self.input_type_ids])
+                                                   self.input_type_ids])
 
     def call(self):
-
-        # self.model = Model(inputs=[self.input_word_ids, self.input_mask, self.segment_ids],
-        #                    outputs=[self.pooled_output, self.sequence_output])
         self.clf_output = self.sequence_output[:, 0, :]
         self.out = tf.keras.layers.Dense(2, activation='softmax')(self.clf_output)
         self.model = tf.keras.models.Model(inputs=[self.input_word_ids,
@@ -129,7 +128,6 @@ class BertModel(BaseModel):
         self.y_dev = tf.keras.utils.to_categorical(self.data_dev['label'], num_classes=2)
         # self.y_train = tf.keras.utils.to_categorical(self.data_dev['label'], num_classes=2) # For a fast test
 
-
     def _get_masks(self, tokens):
         """Get the mask for the tokens.
         Args:
@@ -163,7 +161,7 @@ class BertModel(BaseModel):
 
     def _pad_sentence(self, sentence):
         if len(sentence) > self.max_sequence_len:
-            sentence = sentence[:self.max_sequence_len-1]
+            sentence = sentence[:self.max_sequence_len - 1]
         return sentence
 
     def _encoder(self, text):
@@ -180,17 +178,15 @@ class BertModel(BaseModel):
         return np.asarray(inputs_id, dtype='int32'), np.asarray(input_masks, dtype='int32'), \
                np.asarray(input_segments, dtype='int32')
 
-
     def _encode_sentence(self, sentence):
         tokens = list(self.tokenizer.tokenize(sentence))
         tokens.append('[SEP]')
-        return self.tokenizer.convert_tokens_to_ids(tokens)[:self.max_sequence_len-1]
-
+        return self.tokenizer.convert_tokens_to_ids(tokens)[:self.max_sequence_len - 1]
 
     def _bert_encode(self, data):
         sentence = tf.ragged.constant([self._encode_sentence(sentence=s) for s in np.array(data)])
 
-        cls = [self.tokenizer.convert_tokens_to_ids(['[CLS]'])]*sentence.shape[0]
+        cls = [self.tokenizer.convert_tokens_to_ids(['[CLS]'])] * sentence.shape[0]
         input_word_ids = tf.concat([cls, sentence], axis=-1)
 
         input_mask = tf.ones_like(input_word_ids).to_tensor()
@@ -198,10 +194,6 @@ class BertModel(BaseModel):
         type_cls = tf.zeros_like(cls)
         type_s = tf.zeros_like(sentence)
         input_type_ids = tf.concat([type_cls, type_s], axis=-1).to_tensor()
-        # print(input_word_ids[1])
-        # print('Len de input_word_ids: ', len(input_word_ids))
-        # print('Len de input_mask: ', len(input_mask))
-        # print('Len de input_type_ids: ', len(input_type_ids))
         inputs = {
             'input_word_ids': input_word_ids.to_tensor(),
             'input_mask': input_mask,

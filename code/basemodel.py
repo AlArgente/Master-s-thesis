@@ -21,7 +21,8 @@ class BaseModel(Layer):
 
     def __init__(self, max_len, path_train, path_test, path_dev, epochs, learning_rate, optimizer,
                  load_embeddings, batch_size=32, embedding_size='300', emb_type='fasttext',
-                 vocabulary=None, vocab_size=None, max_sequence_len=None, rate=0.2, length_type='mean'):
+                 vocabulary=None, vocab_size=None, max_sequence_len=None, rate=0.2, length_type='mean',
+                 dense_units=128):
         super(BaseModel).__init__()
         self._vocabulary = vocabulary
         self.max_len = max_len
@@ -65,6 +66,7 @@ class BaseModel(Layer):
         print('Weight for class 0: {:.2f}'.format(self.weight_for_0))
         print('Weight for class 1: {:.2f}'.format(self.weight_for_1))
         self.rate = rate
+        self.dense_units = dense_units
         self.METRICS = [
             # tf.keras.metrics.TruePositives(name='tp'),
             # tf.keras.metrics.FalsePositives(name='fp'),
@@ -113,36 +115,43 @@ class BaseModel(Layer):
 
     @property
     def max_length(self):
-        return 512
+        return 600
 
     def load_data(self):
         """Load the 3 DataFrames, train-test-dev. The data here will be preprocessed, previously tokenized,
         stopwords deleted and stem.
         """
+        # Load train-test-dev data
         self.train = pd.read_csv(self.path_train, sep='\t')
         self.train.loc[self.train['label'] == -1, 'label'] = 0
         self.test = pd.read_csv(self.path_test, sep='\t')
         self.test.loc[self.test['label'] == -1, 'label'] = 0
-        self.dev = pd.read_csv(self.path_dev, sep='\t')
-        self.dev.loc[self.dev['label'] == -1, 'label'] = 0
-
+        if self.dev != None:
+            self.dev = pd.read_csv(self.path_dev, sep='\t')
+            self.dev.loc[self.dev['label'] == -1, 'label'] = 0
+        # Change the label column to categorical.
         self.y_train = tf.keras.utils.to_categorical(self.train['label'], num_classes=2)
         # self.y_train = self.train['label'].astype('category')
         self.y_test = tf.keras.utils.to_categorical(self.test['label'], num_classes=2)
         # self.y_test = self.test['label'].astype('category')
-        self.y_dev = tf.keras.utils.to_categorical(self.dev['label'], num_classes=2)
-        # self.y_dev = self.dev['label'].astype('category')
+        if self.dev != None:
+            self.y_dev = tf.keras.utils.to_categorical(self.dev['label'], num_classes=2)
+            # self.y_dev = self.dev['label'].astype('category')
 
     def pad_sentences(self):
         """Function that pad all the sentences  to the max_len parameter from the class.
         First it tokenize the data with tensorflow tokenizer and then apply the pad_sequences function
         """
         tokenizer = Tokenizer(num_words=self.max_len, lower=True, char_level=False)
-        full_text = pd.concat([self.train.text, self.test.text, self.dev.text])
+        if self.dev != None:
+            full_text = pd.concat([self.train.text, self.test.text, self.dev.text])
+        else:
+            full_text = pd.concat([self.train.text, self.test.text])
         tokenizer.fit_on_texts(full_text)
         word_seq_train = tokenizer.texts_to_sequences(self.train['text'])
         word_seq_test = tokenizer.texts_to_sequences(self.test['text'])
-        word_seq_dev = tokenizer.texts_to_sequences(self.dev['text'])
+        if self.dev != None:
+            word_seq_dev = tokenizer.texts_to_sequences(self.dev['text'])
 
         self.word_index = tokenizer.word_index
 
@@ -166,7 +175,8 @@ class BaseModel(Layer):
 
         self.X_train = pad_sequences(word_seq_train, maxlen=self.max_sequence_len)
         self.X_test = pad_sequences(word_seq_test, maxlen=self.max_sequence_len)
-        self.X_dev = pad_sequences(word_seq_dev, maxlen=self.max_sequence_len)
+        if self.dev != None:
+            self.X_dev = pad_sequences(word_seq_dev, maxlen=self.max_sequence_len)
 
     def __mean_padding(self, text):
         lst = []
@@ -187,7 +197,7 @@ class BaseModel(Layer):
         return int(statistics.median(lst))
 
     def __max_padding(self, text):
-        return 512
+        return 800
 
     def load_vocabulary(self):
         """Function that extract the vocabulary from the train DataFrame. This functions will be used with it's needed
@@ -201,8 +211,6 @@ class BaseModel(Layer):
         """
         self.emb = FactoryEmbeddings()
         self.emb.load_embeddings(self.emb_type)
-        # self._vocabulary = self.emb.embeddings.vocabulary
-        # self.aux_embeddings_matrix = np.asarray(self.emb.embeddings.embeddings_matrix, dtype=np.float32)
         embeddings = self.emb.embeddings.embeddings_full
         words_not_found = []
         self.nb_words = min(self.max_len, len(self.word_index))
@@ -236,8 +244,9 @@ class BaseModel(Layer):
         self.train_dataset = tf.data.Dataset.from_tensor_slices((self.X_train, self.y_train))
         self.train_dataset = self.train_dataset.shuffle(len(self.X_train)).batch(self.batch_size)
 
-        self.val_dataset = tf.data.Dataset.from_tensor_slices((self.X_dev, self.y_dev))
-        self.val_dataset = self.val_dataset.shuffle(len(self.X_dev)).batch(self.batch_size)
+        if self.dev != None:
+            self.val_dataset = tf.data.Dataset.from_tensor_slices((self.X_dev, self.y_dev))
+            self.val_dataset = self.val_dataset.shuffle(len(self.X_dev)).batch(self.batch_size)
 
 
     @abstractmethod

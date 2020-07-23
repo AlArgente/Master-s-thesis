@@ -6,25 +6,26 @@ class ModelConfig(Enum):
     """
     TrainEmbeddings = {
         'batch_size' : 16,
-        'epochs' : 5,
+        'epochs' : 40,
         'filters': 64,
         'kernel_size': 5,
         'optimizer': 'adam',
-        'max_sequence_len': 450, # Mejor resultado 300, segundo mejor 400 (pruebas: 280,315,320,330,350,500)
-        'lstm_units': 50,
+        'max_sequence_len': 455,
+        'lstm_units': 128,
         'path_train' : '../data/train_raw.tsv',
         'path_test': '../data/test_raw.tsv',
         'path_dev': '../data/dev_raw.tsv',
         'vocab_size' : None,
-        'learning_rate': 5e-5,
+        'learning_rate': 1e-5,
         'pool_size': 2,
         'embedding_size': 300,
         'max_len' : 100000,
         'load_embeddings' : True,
         'buffer_size' : 3,
         'emb_type' : 'glove',
-        'rate': 0.2,
-        'length_type': 'fixed'
+        'rate': 0.15,
+        'length_type': 'median',
+        'dense_units': 64
     }
 
     FineTuning = {

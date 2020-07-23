@@ -122,16 +122,17 @@ def main():
         model = BertModel(max_len=config['max_len'], path_train=config['path_train'], path_test=config['path_test'],
                           path_dev=config['path_dev'], epochs=config['epochs'], optimizer=config['optimizer'],
                           load_embeddings=False, batch_size=config['batch_size'], max_sequence_len=config['max_sequence_len'],
-                          rate=config['rate'], learning_rate=config['learning_rate'], length_type=config['length_type']
+                          rate=config['rate'], learning_rate=config['learning_rate'], length_type=config['length_type'],
+                          dense_units=config['dense_units']
                           )
         print('Loading the data.')
         model.load_data()
         print('Creating the model.')
         model.call()
         print('Fitting the model.')
-        model.fit(with_validation=True)
+        # model.fit(with_validation=True)
         print('Predict the test set.')
-        model.predict()
+        # model.predict()
     else:
         print('No other mode implemented yed.')
 

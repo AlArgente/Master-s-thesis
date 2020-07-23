@@ -23,7 +23,7 @@ class CNNRNNModel(BaseModel):
     def __init__(self, batch_size, epochs, filters, kernel_size, optimizer, max_sequence_len, lstm_units,
                  path_train, path_test, path_dev, vocab_size, learning_rate=1e-3, pool_size=4, rate=0.2,
                  embedding_size=300, max_len=1900, load_embeddings=True, buffer_size=3, emb_type='fasttext',
-                 length_type='mean'):
+                 length_type='mean', dense_units=128):
         """Init function for the model.
         """
         super(CNNRNNModel, self).__init__(max_len=max_len, path_train=path_train,
@@ -31,7 +31,7 @@ class CNNRNNModel(BaseModel):
                                           embedding_size=embedding_size, emb_type=emb_type, vocab_size=vocab_size,
                                           max_sequence_len=max_sequence_len, epochs=epochs, learning_rate=learning_rate,
                                           optimizer=optimizer, load_embeddings=load_embeddings, rate=rate,
-                                          length_type=length_type)
+                                          length_type=length_type, dense_units=dense_units)
         self.filters = filters
         self.kernel_size = kernel_size
         self.pool_size = pool_size
@@ -43,7 +43,11 @@ class CNNRNNModel(BaseModel):
                                           monitor='val_accuracy', save_best_only=True)
         self.reduce_lr = ReduceLROnPlateau(monitor='val_loss', patience=2, factor=0.2, verbose=0, mode='auto',
                                            min_lr=(self.learning_rate / 100))
-        self.callbacks = [self.model_save]
+        self.early_stop = tf.keras.callbacks.EarlyStopping(
+            monitor='val_loss', patience=4, verbose=1, mode='min',
+            baseline=None, restore_best_weights=False
+        )
+        self.callbacks = [self.model_save, self.early_stop]
         # self.callbacks = None
 
     def call(self):
@@ -75,38 +79,12 @@ class CNNRNNModel(BaseModel):
             # Second:
             self.model.add(tf.keras.layers.Embedding(self.vocab_size, self.embedding_size,
                                                      input_length=self.max_sequence_len, trainable=True))
-            # self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same',
-            #                       kernel_regularizer=l2(0.0001)))
-
-        # self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same', input_shape=input_shape))
-        # La capa superior se añade si los embeddings son los de fasttext, sino la capa de abajo
-        # self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same'))
-        # self.model.add(Dropout(self.rate))
-        # self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same',
-        #        kernel_regularizer=l2(0.0001)))
-        # self.model.add(MaxPool1D(pool_size=self.pool_size))
-        """
-        self.model.add(Conv1D(self.filters, self.kernel_size, activation='relu', padding='same',
-                              kernel_regularizer=l2(0.0001)))
-        self.model.add(MaxPool1D(pool_size=self.pool_size))
-        self.model.add(Dropout(self.rate))
-        """
-        self.model.add(Bidirectional(LSTM(self.lstm_units, activation='relu', # return_sequences=True,
+        self.model.add(Bidirectional(LSTM(self.lstm_units, activation='tanh', # return_sequences=True,
+                                          recurrent_dropout=0, recurrent_activation='sigmoid',
+                                          unroll=False, use_bias=True,
                                           kernel_regularizer=l2(0.0001))))
-        # self.model.add(Dropout(self.rate))
-        """
-        self.model.add(Bidirectional(LSTM(self.lstm_units, activation='relu', return_sequences=True,
-                                          kernel_regularizer=l2(0.0001))))
+        self.model.add(Dense(self.dense_units, activation='relu', kernel_regularizer=l2(0.0001)))
         self.model.add(Dropout(self.rate))
-        """
-        self.model.add(Dense(128, activation='relu', kernel_regularizer=l2(0.0001)))
-        # self.model.add(Bidirectional(LSTM(self.lstm_units, activation='relu', kernel_regularizer=l2(0.0001))))
-        self.model.add(Dropout(self.rate))
-        # self.model.add(GlobalMaxPool1D())
-        """
-        self.model.add(Dense(256, activation='relu', kernel_regularizer=l2(0.0001)))
-        self.model.add(Dropout(self.rate))
-        """
         self.model.add(Dense(2, activation='softmax'))  # bias_initializer=self.initial_bias
 
         self.model.compile(loss=BinaryCrossentropy(),
@@ -114,7 +92,7 @@ class CNNRNNModel(BaseModel):
                            metrics=self.METRICS)
 
         self.model.summary()
-        tf.keras.utils.plot_model(self.model, show_shapes=True, dpi=48, to_file='cnnrnnmodel.png')
+        # tf.keras.utils.plot_model(self.model, show_shapes=True, dpi=48, to_file='cnnrnnmodel.png')
 
     def fit(self, with_validation=False):
         """Fit the model using the keras fit function.
@@ -126,11 +104,17 @@ class CNNRNNModel(BaseModel):
             self.history = self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs,
                                           verbose=1,
                                           callbacks=self.callbacks, shuffle=True, class_weight=self.class_weights)
-        else:
+        elif self.dev != None:
             self.history = self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs,
                                           verbose=1,
                                           callbacks=self.callbacks, shuffle=True,
                                           validation_data=(self.X_dev, self.y_dev),
+                                          class_weight=self.class_weights)
+        else:
+            self.history = self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs,
+                                          verbose=1,
+                                          callbacks=self.callbacks, shuffle=True,
+                                          validation_split=0.1,
                                           class_weight=self.class_weights)
         print('Salgo de fit')
 
@@ -144,6 +128,9 @@ class CNNRNNModel(BaseModel):
         if not with_validation:
             self.history = self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
                                           class_weight=self.class_weights)
-        else:
+        elif self.dev != None:
             self.history = self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
                                           class_weight=self.class_weights, validation_data=self.val_dataset)
+        else:
+            self.history = self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
+                                          class_weight=self.class_weights, validation_split=0.1)
