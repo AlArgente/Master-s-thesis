@@ -7,9 +7,10 @@ import os
 import random
 
 from cnnrnn_model import CNNRNNModel
+from attention_model import AttentionModel
+from modeltransformer import TransformerModel
 from finetune import FineTuningModel
 from bertmodel import BertModel
-from transformer_model import TransformerEncoder
 from preprocessing import Preprocessing
 import pandas as pd
 from modelconfiguration import ModelConfig
@@ -76,7 +77,6 @@ def main():
         model.fit(with_validation=False)
         print('Previo a predict')
         model.predict()
-
     elif args['mode'] == 3:
         # Creación del modelo con embeddings de fasttext o glove
         config = ModelConfig.TrainEmbeddings.value
@@ -87,7 +87,8 @@ def main():
                             embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
                             pool_size=config['pool_size'], path_train=config['path_train'],
                             path_test=config['path_test'], path_dev=config['path_dev'], emb_type=config['emb_type'],
-                            buffer_size=config['buffer_size'], rate=config['rate'], length_type=config['length_type']
+                            buffer_size=config['buffer_size'], rate=config['rate'], length_type=config['length_type'],
+                            dense_units=config['dense_units']
                             )
         model.prepare_data_as_tensors()
         print('Building the model.')
@@ -98,32 +99,32 @@ def main():
         model.predict()
         # print('Se guarda historial del loss:')
         # model.save_plot_history()
-
     elif args['mode'] == 4:
-        config = ModelConfig.FineTuning.value
-        model = FineTuningModel(path_train=config['path_train'], path_test=config['path_test'],
-                                path_dev=config['path_dev'], epochs=config['epochs'],
-                                max_sequence_len=config['max_sequence_len'], batch_size=config['batch_size'],
-                                optimizer=config['optimizer'], tr_size=config['tr_size'],
-                                learning_rate=config['learning_rate'], eps=config['eps'],
-                                model_to_use=config['model_to_use'], api=config['api'], length_type=config['length_type']
-                                )
-        print('Loading the data.')
-        model.load_data()
-        print('Creating the model.')
+        config = ModelConfig.SecondExperiment.value
+        model = CNNRNNModel(batch_size=config['batch_size'], epochs=config['epochs'], vocab_size=config['vocab_size'],
+                            max_len=config['max_len'], filters=config['filters'], kernel_size=config['kernel_size'],
+                            optimizer=config['optimizer'], learning_rate=config['learning_rate'],
+                            max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
+                            embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
+                            pool_size=config['pool_size'], path_train=config['path_train'],
+                            path_test=config['path_test'], path_dev=None, emb_type=config['emb_type'],
+                            buffer_size=config['buffer_size'], rate=config['rate'], length_type=config['length_type'],
+                            dense_units=config['dense_units']
+                            )
+        model.prepare_data_as_tensors()
+        print('Building the model.')
         model.call()
-        print('Fitting the model.')
-        model.fit()
-        # model.fit_trainer()
-        print('Prediction')
-        # model.predict_trainer()
+        print('Previo a fit')
+        model.fit_as_tensors(with_validation=True)
+        print('Previo a predict')
+        model.predict()
     elif args['mode'] == 5:
         config = ModelConfig.BertConfig.value
         model = BertModel(max_len=config['max_len'], path_train=config['path_train'], path_test=config['path_test'],
                           path_dev=config['path_dev'], epochs=config['epochs'], optimizer=config['optimizer'],
-                          load_embeddings=False, batch_size=config['batch_size'], max_sequence_len=config['max_sequence_len'],
-                          rate=config['rate'], learning_rate=config['learning_rate'], length_type=config['length_type'],
-                          dense_units=config['dense_units']
+                          load_embeddings=False, batch_size=config['batch_size'],
+                          max_sequence_len=config['max_sequence_len'],
+                          rate=config['rate'], learning_rate=config['learning_rate'], length_type=config['length_type']
                           )
         print('Loading the data.')
         model.load_data()
@@ -133,6 +134,29 @@ def main():
         # model.fit(with_validation=True)
         print('Predict the test set.')
         # model.predict()
+    elif args['mode'] == 6:
+        config = ModelConfig.TransformerConfig.value
+        model = TransformerModel(batch_size=config['batch_size'], epochs=config['epochs'],
+                                 vocab_size=config['vocab_size'],
+                                 max_len=config['max_len'], filters=config['filters'],
+                                 kernel_size=config['kernel_size'],
+                                 optimizer=config['optimizer'], learning_rate=config['learning_rate'],
+                                 max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
+                                 embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
+                                 pool_size=config['pool_size'], path_train=config['path_train'],
+                                 path_test=config['path_test'], path_dev=config['path_dev'],
+                                 emb_type=config['emb_type'],
+                                 buffer_size=config['buffer_size'], rate=config['rate'],
+                                 length_type=config['length_type'], dense_units=config['dense_units'],
+                                 attheads=config['attheads']
+                                 )
+        model.prepare_data_as_tensors()
+        print('Building the model.')
+        model.call()
+        print('Previo a fit')
+        model.fit_as_tensors(with_validation=True)
+        print('Previo a predict')
+        model.predict()
     else:
         print('No other mode implemented yed.')
 

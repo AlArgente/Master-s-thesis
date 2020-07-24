@@ -1,3 +1,4 @@
+import copy
 import statistics
 import pandas as pd
 import numpy as np
@@ -6,6 +7,7 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 from tensorflow.keras.layers import Layer
 from tensorflow.keras.models import Model
+from tensorflow.keras import backend as K
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.preprocessing.text import Tokenizer
 from factory_embeddings import FactoryEmbeddings
@@ -16,6 +18,7 @@ from abc import abstractmethod
 from tensorflow.keras.optimizers import Adam, RMSprop
 from sklearn.metrics import classification_report, accuracy_score, roc_auc_score, f1_score, precision_score, recall_score
 
+SEED = 42
 
 class BaseModel(Layer):
 
@@ -75,11 +78,36 @@ class BaseModel(Layer):
             tf.keras.metrics.BinaryAccuracy(name='accuracy'),
             tf.keras.metrics.Precision(name='precision'),
             tf.keras.metrics.Recall(name='recall'),
+            # BaseModel.precision,
+            # BaseModel.recall,
             tf.keras.metrics.AUC(name='auc')
         ]
         self.initial_bias = abs(np.log([self.pos/self.neg]))
         self.initial_bias = self.pos / self.total
         self.history = None
+
+    @staticmethod
+    def check_units(y_true, y_pred):
+        if y_pred.shape[1] != 1:
+            y_pred = y_pred[:,1:2]
+            y_true = y_true[:,1,2]
+        return y_true, y_pred
+
+    @staticmethod
+    def precision(y_true, y_pred):
+        y_true, y_pred = BaseModel.check_units(y_true, y_pred)
+        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+        predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+        precision = true_positives / (predicted_positives + K.epsilon())
+        return precision
+
+    @staticmethod
+    def recall(y_true, y_pred):
+        y_true, y_pred = BaseModel.check_units(y_true, y_pred)
+        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+        possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+        recall = true_positives / (possible_positives + K.epsilon())
+        return recall
 
     @property
     def vocab_size(self):
@@ -126,7 +154,7 @@ class BaseModel(Layer):
         self.train.loc[self.train['label'] == -1, 'label'] = 0
         self.test = pd.read_csv(self.path_test, sep='\t')
         self.test.loc[self.test['label'] == -1, 'label'] = 0
-        if self.dev != None:
+        if self.path_dev != None:
             self.dev = pd.read_csv(self.path_dev, sep='\t')
             self.dev.loc[self.dev['label'] == -1, 'label'] = 0
         # Change the label column to categorical.
@@ -134,7 +162,7 @@ class BaseModel(Layer):
         # self.y_train = self.train['label'].astype('category')
         self.y_test = tf.keras.utils.to_categorical(self.test['label'], num_classes=2)
         # self.y_test = self.test['label'].astype('category')
-        if self.dev != None:
+        if self.path_dev != None:
             self.y_dev = tf.keras.utils.to_categorical(self.dev['label'], num_classes=2)
             # self.y_dev = self.dev['label'].astype('category')
 
@@ -143,14 +171,14 @@ class BaseModel(Layer):
         First it tokenize the data with tensorflow tokenizer and then apply the pad_sequences function
         """
         tokenizer = Tokenizer(num_words=self.max_len, lower=True, char_level=False)
-        if self.dev != None:
+        if self.path_dev != None:
             full_text = pd.concat([self.train.text, self.test.text, self.dev.text])
         else:
             full_text = pd.concat([self.train.text, self.test.text])
         tokenizer.fit_on_texts(full_text)
         word_seq_train = tokenizer.texts_to_sequences(self.train['text'])
         word_seq_test = tokenizer.texts_to_sequences(self.test['text'])
-        if self.dev != None:
+        if self.path_dev != None:
             word_seq_dev = tokenizer.texts_to_sequences(self.dev['text'])
 
         self.word_index = tokenizer.word_index
@@ -175,7 +203,7 @@ class BaseModel(Layer):
 
         self.X_train = pad_sequences(word_seq_train, maxlen=self.max_sequence_len)
         self.X_test = pad_sequences(word_seq_test, maxlen=self.max_sequence_len)
-        if self.dev != None:
+        if self.path_dev != None:
             self.X_dev = pad_sequences(word_seq_dev, maxlen=self.max_sequence_len)
 
     def __mean_padding(self, text):
@@ -244,22 +272,62 @@ class BaseModel(Layer):
         self.train_dataset = tf.data.Dataset.from_tensor_slices((self.X_train, self.y_train))
         self.train_dataset = self.train_dataset.shuffle(len(self.X_train)).batch(self.batch_size)
 
-        if self.dev != None:
+        if self.path_dev != None:
             self.val_dataset = tf.data.Dataset.from_tensor_slices((self.X_dev, self.y_dev))
             self.val_dataset = self.val_dataset.shuffle(len(self.X_dev)).batch(self.batch_size)
 
-
-    @abstractmethod
+        """
+        # TODO: Prepare val_dataset as tensor using train_dataset
+        else:
+            train_size = int(0.9 * len(self.X_train))
+            val_size = int(0.1 * len(self.X_train))
+            self.full_dataset = tf.data.Dataset.from_tensor_slices((self.X_train, self.y_train))
+            self.train_dataset = self.train_dataset.shuffle(len(self.X_train)).batch(self.batch_size)
+            self.train_dataset = self.full_dataset.take(train_size)
+            self.val_dataset = self.full_dataset.skip(train_size)
+            self.val_dataset = self.val_dataset.skip(val_size)
+            self.val_dataset = self.val_dataset.take(val_size)
+        """
     def fit(self, with_validation=False):
-        """Fit the model.
+        """Fit the model using the keras fit function.
         Arguments:
             - with_validation (bool): If True test data is applied as validation set
         """
-        pass
+        tf.random.set_seed(SEED)
+        if not with_validation:
+            self.history = self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs,
+                                          verbose=1,
+                                          callbacks=self.callbacks, shuffle=True, class_weight=self.class_weights)
+        elif self.path_dev != None:
+            self.history = self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs,
+                                          verbose=1,
+                                          callbacks=self.callbacks, shuffle=True,
+                                          validation_data=(self.X_dev, self.y_dev),
+                                          class_weight=self.class_weights)
+        else:
+            self.history = self.model.fit(self.X_train, self.y_train, batch_size=self.batch_size, epochs=self.epochs,
+                                          verbose=1,
+                                          callbacks=self.callbacks, shuffle=True,
+                                          validation_split=0.1,
+                                          class_weight=self.class_weights)
+        print('Salgo de fit')
 
-    @abstractmethod
     def fit_as_tensors(self, with_validation=False):
-        pass
+        """Fit the model using the keras fit function. The data must be loaded using the prepare_data_as_tensors
+        function.
+        Arguments:
+            - with_validation (bool): If True test data is applied as validation set
+        """
+        tf.random.set_seed(SEED)
+        if not with_validation:
+            self.history = self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
+                                          class_weight=self.class_weights)
+        elif self.path_dev != None:
+            self.history = self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
+                                          class_weight=self.class_weights, validation_data=self.val_dataset)
+        else:
+            self.history = self.model.fit(self.train_dataset, epochs=self.epochs, verbose=1, callbacks=self.callbacks,
+                                          class_weight=self.class_weights)
 
     @abstractmethod
     def call(self):

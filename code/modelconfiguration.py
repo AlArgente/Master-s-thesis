@@ -11,12 +11,12 @@ class ModelConfig(Enum):
         'kernel_size': 5,
         'optimizer': 'adam',
         'max_sequence_len': 455,
-        'lstm_units': 128,
+        'lstm_units': 64,
         'path_train' : '../data/train_raw.tsv',
         'path_test': '../data/test_raw.tsv',
         'path_dev': '../data/dev_raw.tsv',
         'vocab_size' : None,
-        'learning_rate': 1e-5,
+        'learning_rate': 5e-5,
         'pool_size': 2,
         'embedding_size': 300,
         'max_len' : 100000,
@@ -26,6 +26,54 @@ class ModelConfig(Enum):
         'rate': 0.15,
         'length_type': 'median',
         'dense_units': 64
+    }
+
+    SecondExperiment = {
+        'batch_size' : 16,
+        'epochs' : 40,
+        'filters': 64,
+        'kernel_size': 5,
+        'optimizer': 'adam',
+        'max_sequence_len': 455,
+        'lstm_units': 64,
+        'path_train' : '../data/train_raw.tsv',
+        'path_test': '../data/test_raw.tsv',
+        'vocab_size' : None,
+        'learning_rate': 5e-5,
+        'pool_size': 2,
+        'embedding_size': 300,
+        'max_len' : 100000,
+        'load_embeddings' : True,
+        'buffer_size' : 3,
+        'emb_type' : 'glove',
+        'rate': 0.15,
+        'length_type': 'median',
+        'dense_units': 64
+    }
+
+    TransformerConfig = {
+        'batch_size': 16,
+        'epochs': 40,
+        'filters': 64,
+        'kernel_size': 5,
+        'optimizer': 'adam',
+        'max_sequence_len': 455,
+        'lstm_units': 64,
+        'path_train': '../data/train_raw.tsv',
+        'path_test': '../data/test_raw.tsv',
+        'path_dev': '../data/dev_raw.tsv',
+        'vocab_size': None,
+        'learning_rate': 5e-5,
+        'pool_size': 2,
+        'embedding_size': 300,
+        'max_len': 100000,
+        'load_embeddings': True,
+        'buffer_size': 3,
+        'emb_type': 'glove',
+        'rate': 0.15,
+        'length_type': 'median',
+        'dense_units': 64,
+        'attheads': 12
     }
 
     FineTuning = {
