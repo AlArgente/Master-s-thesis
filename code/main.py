@@ -176,7 +176,7 @@ def main():
         print('Previo a fit')
         model.fit(with_validation=True)
         print('Previo a predict')
-        model.predict_v2()
+        model.predict()
         # print('Se guarda historial del loss:')
         # model.save_plot_history()
     else:
