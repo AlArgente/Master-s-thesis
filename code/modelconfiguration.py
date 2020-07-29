@@ -6,7 +6,7 @@ class ModelConfig(Enum):
     """
     TrainEmbeddings = {
         'batch_size' : 16,
-        'epochs' : 40,
+        'epochs' : 15,
         'filters': 64,
         'kernel_size': 5,
         'optimizer': 'adam',
@@ -16,7 +16,7 @@ class ModelConfig(Enum):
         'path_test': '../data/test_raw.tsv',
         'path_dev': '../data/dev_raw.tsv',
         'vocab_size' : None,
-        'learning_rate': 5e-5,
+        'learning_rate': 1e-3,
         'pool_size': 2,
         'embedding_size': 300,
         'max_len' : 100000,
@@ -25,12 +25,13 @@ class ModelConfig(Enum):
         'emb_type' : 'glove',
         'rate': 0.15,
         'length_type': 'median',
-        'dense_units': 64
+        'dense_units': 128,
+        'concat': False
     }
 
     SecondExperiment = {
         'batch_size' : 16,
-        'epochs' : 40,
+        'epochs' : 15,
         'filters': 64,
         'kernel_size': 5,
         'optimizer': 'adam',
@@ -39,7 +40,7 @@ class ModelConfig(Enum):
         'path_train' : '../data/train_raw.tsv',
         'path_test': '../data/test_raw.tsv',
         'vocab_size' : None,
-        'learning_rate': 5e-5,
+        'learning_rate': 1e-3,
         'pool_size': 2,
         'embedding_size': 300,
         'max_len' : 100000,
@@ -48,12 +49,13 @@ class ModelConfig(Enum):
         'emb_type' : 'glove',
         'rate': 0.15,
         'length_type': 'median',
-        'dense_units': 64
+        'dense_units': 128,
+        'concat': False
     }
 
     TransformerConfig = {
         'batch_size': 16,
-        'epochs': 40,
+        'epochs': 15,
         'filters': 64,
         'kernel_size': 5,
         'optimizer': 'adam',
@@ -73,7 +75,34 @@ class ModelConfig(Enum):
         'rate': 0.15,
         'length_type': 'median',
         'dense_units': 64,
-        'attheads': 12
+        'attheads': 12,
+        'att_layers': 2
+    }
+
+    AttentionConfig = {
+        'batch_size': 16,
+        'epochs': 20,
+        'filters': 64,
+        'kernel_size': 5,
+        'optimizer': 'adam',
+        'max_sequence_len': 455,
+        'lstm_units': 64,
+        'path_train': '../data/train_raw.tsv',
+        'path_test': '../data/test_raw.tsv',
+        'path_dev': '../data/dev_raw.tsv',
+        'vocab_size': None,
+        'learning_rate': 1e-3,
+        'pool_size': 2,
+        'embedding_size': 300,
+        'max_len': 100000,
+        'load_embeddings': True,
+        'buffer_size': 3,
+        'emb_type': 'glove',
+        'rate': 0.15,
+        'length_type': 'median',
+        'dense_units': 64,
+        'both_embeddings': False,
+        'att_units': 300
     }
 
     FineTuning = {
@@ -108,7 +137,31 @@ class ModelConfig(Enum):
         'load_embeddings': True,
         'buffer_size': 3,
         'emb_type': 'fasttext',
-        'rate': 0.2,
+        'rate': 0.5,
         'trainable': True,
-        'length_type': 'mean'
+        'length_type': 'fixed'
+    }
+
+    MeanModelConfig = {
+        'batch_size': 16,
+        'epochs': 15,
+        'filters': 64,
+        'kernel_size': 5,
+        'optimizer': 'adam',
+        'max_sequence_len': 455,
+        'lstm_units': 64,
+        'path_train': '../data/train_raw.tsv',
+        'path_test': '../data/test_raw.tsv',
+        'path_dev': '../data/dev_raw.tsv',
+        'vocab_size': None,
+        'learning_rate': 1e-3,
+        'pool_size': 2,
+        'embedding_size': 300,
+        'max_len': 100000,
+        'load_embeddings': True,
+        'buffer_size': 3,
+        'emb_type': 'glove',
+        'rate': 0.15,
+        'length_type': 'median',
+        'dense_units': 128,
     }

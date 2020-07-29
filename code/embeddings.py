@@ -2,6 +2,7 @@ import io
 import time
 import numpy as np
 from abc import ABC, abstractmethod
+from nltk import sent_tokenize, word_tokenize
 
 class Embeddings(ABC):
     """Abstract class to load different embeddings
@@ -32,8 +33,7 @@ class Embeddings(ABC):
     def load_embeddings(self, fname):
         pass
 
-    def calc_embeddings(self, text):
-        # DEPRECATED: To delete
+    def calc_embeddings(self, text, max_sequence_len):
         """Function that apply the vector to get the embeddings from the text.
         Arguments:
             - text: list of lists with the text at least tokenized.
@@ -42,18 +42,32 @@ class Embeddings(ABC):
         """
         # This function will be deleted in the future
         embeddings = []
-        # null_embeddings = np.zeros(self.d)
-
-        for sentence in text:
-            embedding_sentence = []
-            for word in sentence:
-                if word in self.__vocabulary:
-                    embedding_word = self.__vocabulary[word]
-                else:
-                    embedding_word = np.random.normal(0, 1, self.d)
-                    self.__vocabulary[word] = embedding_word
-                embedding_sentence.append(embedding_word)
-            embeddings.append(embedding_sentence)
+        null_embeddings = np.zeros(self.d)
+        total_words = 0
+        for sequence in text:
+            lines = sent_tokenize(sequence)
+            embedding_sequence = null_embeddings
+            count = 0 # Count all the lines
+            for line in lines:
+                embedding_sentence = null_embeddings
+                words = word_tokenize(line, preserve_line=True)
+                count_word = 0
+                count += 1
+                for word in words: # Every word in the line
+                    count_word += 1
+                    if total_words >= max_sequence_len:
+                        continue
+                    if word in self.embeddings.keys():
+                        embedding_word = self.embeddings[word]
+                    else:
+                        # embedding_word = np.random.normal(0, 1, self.d)
+                        embedding_word = null_embeddings
+                    embedding_sentence = np.sum([embedding_sentence, embedding_word], axis=0)
+                    total_words+=1
+                # embedding_sentence = embedding_sentence / count_word
+                embedding_sequence = np.sum([embedding_sequence, embedding_sentence], axis=0)
+            embedding_sequence = embedding_sequence / count # Divide by all the lines
+            embeddings.append(embedding_sequence)
 
         """
         # Alternative:
@@ -67,7 +81,11 @@ class Embeddings(ABC):
                 embedding_sentence.append(embedding_word)
             embeddings.append(embedding_sentence)
         """
-        return np.asarray(embeddings)
+        if len(text) != len(embeddings):
+            raise ValueError(
+                "The len of the text and the embeddings corresponding to it, arent the same."
+            )
+        return np.array(embeddings)
 
 
 

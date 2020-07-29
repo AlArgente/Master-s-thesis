@@ -17,6 +17,8 @@ class MultiHeadSelfAttention(keras.layers.Layer):
         self.combine_heads = keras.layers.Dense(embed_dim)
 
     def attention(self, query, key, value):
+        """Function that computes the Scaled Dot-Product Attention
+        """
         score = tf.matmul(query, key, transpose_b=True)
         dim_key = tf.cast(tf.shape(key)[-1], tf.float32)
         scaled_score = score / tf.math.sqrt(dim_key)

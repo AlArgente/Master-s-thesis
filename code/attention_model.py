@@ -7,14 +7,12 @@ import tensorflow as tf
 from tensorflow.keras import Sequential
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import LSTM, Bidirectional, Conv1D, Attention, GlobalAveragePooling1D, GlobalMaxPool1D, \
-    Dropout, Layer, Dense, MaxPool1D
+    Dropout, Layer, Dense, MaxPool1D, Concatenate, LayerNormalization
 from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy, SparseCategoricalCrossentropy
 from tensorflow.keras.regularizers import l2, l1, l1_l2
 from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
-from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 from basemodel import BaseModel
 from banhdanauattention import BahdanauAttention
-
 
 SEED = 42
 
@@ -23,58 +21,85 @@ class AttentionModel(BaseModel):
     '''Class that contain the attention model created for the Proppy database.
     '''
 
-    def __init__(self, batch_size, epochs, filters, kernel_size, optimizer, max_sequence_len, lstm_units,
-                 path_train, path_test, path_dev, vocab_size, learning_rate=1e-3, pool_size=4, rate=0.2,
+    def __init__(self, batch_size, epochs, optimizer, max_sequence_len, lstm_units,
+                 path_train, path_test, path_dev, vocab_size=None, learning_rate=1e-3,
+                 filters=64, kernel_size=5, pool_size=4, rate=0.2,
                  embedding_size=300, max_len=1900, load_embeddings=True, buffer_size=3, emb_type='fasttext',
-                 length_type='mean', dense_units=128):
+                 length_type='median', dense_units=128, both_embeddings=True, att_units=12):
         """Init function for the model.
         """
         super(AttentionModel, self).__init__(max_len=max_len, path_train=path_train,
-                                          path_test=path_test, path_dev=path_dev, batch_size=batch_size,
-                                          embedding_size=embedding_size, emb_type=emb_type, vocab_size=vocab_size,
-                                          max_sequence_len=max_sequence_len, epochs=epochs, learning_rate=learning_rate,
-                                          optimizer=optimizer, load_embeddings=load_embeddings, rate=rate,
-                                          length_type=length_type, dense_units=dense_units)
-        self.filters = filters
-        self.kernel_size = kernel_size
-        self.pool_size = pool_size
+                                             path_test=path_test, path_dev=path_dev, batch_size=batch_size,
+                                             embedding_size=embedding_size, emb_type=emb_type, vocab_size=vocab_size,
+                                             max_sequence_len=max_sequence_len, epochs=epochs,
+                                             learning_rate=learning_rate,
+                                             optimizer=optimizer, load_embeddings=load_embeddings, rate=rate,
+                                             length_type=length_type, dense_units=dense_units,
+                                             both_embeddings=both_embeddings,
+                                             filters=filters, kernel_size=kernel_size, pool_size=pool_size,
+                                             buffer_size=buffer_size
+                                             )
         self.lstm_units = lstm_units
-        self.buffer_size = buffer_size
-        self.callbacks = None
-        self.checkpoint_filepath = './checkpoints/checkpoint_attention.cpk'
-        self.model_save = ModelCheckpoint(filepath=self.checkpoint_filepath, save_weights_only=True, mode='max',
-                                          monitor='val_accuracy', save_best_only=True)
-        self.reduce_lr = ReduceLROnPlateau(monitor='val_loss', patience=2, factor=0.2, verbose=0, mode='auto',
-                                           min_lr=(self.learning_rate / 100))
-        self.early_stop = tf.keras.callbacks.EarlyStopping(
-            monitor='val_loss', patience=5, verbose=1, mode='min',
-            baseline=None, restore_best_weights=False
-        )
-        self.callbacks = [self.model_save, self.early_stop]
         # self.callbacks = None
+        self.att_units = att_units
+
+    def attention(self, query, key, value):
+        """Function that computes the Scaled Dot-Product Attention
+        """
+        score = tf.matmul(query, key, transpose_b=True)
+        dim_key = tf.cast(tf.shape(key)[-1], tf.float32)
+        scaled_score = score / tf.math.sqrt(dim_key)
+        weights = tf.nn.softmax(scaled_score, axis=-1)
+        output = tf.matmul(weights, value)
+        return output, weights
+
+    def scaled_dot_product_attention(self, inputs):
+        query = Dense(self.lstm_units*2)(inputs)
+        key = Dense(self.lstm_units*2)(inputs)
+        values = Dense(self.lstm_units*2)(inputs)
+        att, weights = self.attention(query, key, values)
+        print(att.shape)
+        print(weights.shape)
+        return att, weights
 
     def call(self):
-        # TODO: Merge BiLSTM to BahdanauAttention
         # Prepraring the embeddings input
         sequence_input = tf.keras.layers.Input(shape=(self.max_sequence_len,), dtype="int32", name="seq_input")
-        token_embeddings = tf.keras.layers.Embedding(self.nb_words, self.embedding_size,
-                                                    weights=[self.embeddings_matrix],
-                                                    input_length=self.max_sequence_len,
-                                                    trainable=False, name='embeddings')
-        embedding_sequence = token_embeddings(sequence_input)
-
-        # Add the BiLSTM layer
-        x = Bidirectional(LSTM(units=self.lstm_units, activation='tanh', return_sequences=True,
-                               recurrent_dropout=0, recurrent_activation='sigmoid', unroll=False, use_bias=True,
-                               kernel_regularizer=l2(0.0001)), name='bilstm')(embedding_sequence)
-        # ADD ATTENTION
-        att , att_output = BahdanauAttention(10)(x[0], x[1])
-        # att = att_output[:, 0, :]
+        # Preparing the document mean
+        sequente_input_mean_emb = tf.keras.layers.Input(shape=(self.embedding_size,), dtype='float32', name='mean_emb')
+        sequente_input_mean_emb = Dense(self.dense_units, activation='relu', kernel_regularizer=l2(0.0001))(
+            sequente_input_mean_emb)
+        token_embeddings_glove = tf.keras.layers.Embedding(self.nb_words, self.embedding_size,
+                                                           weights=[self.embeddings_matrix],
+                                                           input_length=self.max_sequence_len,
+                                                           trainable=False, name='embeddings')
+        # embedding_sequence = Concatenate(axis=1, name='full_embeddings')([embedding_sequence_glove,
+        #                                                                   embedding_sequence_ft])
+        embedding_sequence = token_embeddings_glove(sequence_input)
+        # Add the BiLSTM layer and get the states
+        x, forward_h, forward_c, backward_h, backward_c = Bidirectional(LSTM(units=self.lstm_units, activation='tanh',
+                                                                             return_sequences=True,
+                                                                             recurrent_dropout=0,
+                                                                             recurrent_activation='sigmoid',
+                                                                             unroll=False, use_bias=True,
+                                                                             kernel_regularizer=l2(0.0001),
+                                                                             return_state=True),
+                                                                        name='bilstm')(embedding_sequence)
+        # Add BahdanauAttention
+        # Pass states to the attention_layer
+        # att, _ = BahdanauAttention(self.att_units)(forward_h, x) # It only works with forward_h
+        # Scaled Dot Product Attention
+        att, _ = self.scaled_dot_product_attention(x)
+        # Norm the attetion
+        out1 = LayerNormalization(epsilon=1e-6)(x + att)
+        max_pooling = GlobalMaxPool1D()(out1)
         # Add the Dense layer
-        dense = Dense(units=self.dense_units, activation='relu', kernel_regularizer=l2(0.0001), name='dense_layer')(att)
-        max_pooling = MaxPool1D(name='pooling')(dense)
+        dense = Dense(units=self.dense_units, activation='relu', kernel_regularizer=l2(0.0001),
+                      name='dense_layer')(max_pooling)
+        dropout = Dropout(self.rate)(dense)
+        # concat = Concatenate()([pool, sequente_input_mean_emb])
         # Pred layer
-        prediction = Dense(units=2, activation='softmax', name='pred_layer')(dense)
+        prediction = Dense(units=2, activation='softmax', name='pred_layer')(dropout)
         self.model = Model(inputs=[sequence_input], outputs=[prediction])
         self.model.compile(loss=BinaryCrossentropy(),
                            optimizer=self.optimizer,

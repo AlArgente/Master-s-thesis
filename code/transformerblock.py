@@ -22,7 +22,7 @@ class TransformerBlock(layers.Layer):
         self.dropout1 = layers.Dropout(rate)
         self.dropout2 = layers.Dropout(rate)
 
-    def call(self, inputs, training):
+    def call(self, inputs, training=True):
         attn_output = self.att(inputs) # (None, input_seq_len, embeddings_dim)
         attn_output = self.dropout1(attn_output, training=training)
         out1 = self.layernorm1(inputs + attn_output) # (None, input_seq_len, embeddings_dim)

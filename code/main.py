@@ -8,22 +8,16 @@ import random
 
 from cnnrnn_model import CNNRNNModel
 from attention_model import AttentionModel
+from mean_model import MeanModel
 from modeltransformer import TransformerModel
 from finetune import FineTuningModel
 from bertmodel import BertModel
 from preprocessing import Preprocessing
 import pandas as pd
 from modelconfiguration import ModelConfig
-from factory_embeddings import FactoryEmbeddings
-from ast import literal_eval
 
 
 def main():
-    """
-    Hay 3 modos de ejecución,
-
-    Modo 1: Preprocesa los datos, calcula
-    """
     start_time = time.time()
     random.seed(42)
     # os.environ["CUDA_VISIBLE_DEVICES"] = '-1'
@@ -60,21 +54,25 @@ def main():
                                 index_label=False)
     elif args['mode'] == 2:
         # Creación del modelo con embeddings de fasttext o glove
-        config = ModelConfig.TrainEmbeddings.value
-        model = CNNRNNModel(batch_size=config['batch_size'], epochs=config['epochs'], vocab_size=config['vocab_size'],
-                            max_len=config['max_len'], filters=config['filters'], kernel_size=config['kernel_size'],
-                            optimizer=config['optimizer'], learning_rate=config['learning_rate'],
-                            max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
-                            embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
-                            pool_size=config['pool_size'], path_train=config['path_train'],
-                            path_test=config['path_test'], path_dev=config['path_dev'], emb_type=config['emb_type'],
-                            buffer_size=config['buffer_size']
-                            )
-        model.prepare_data()
+        config = ModelConfig.AttentionConfig.value
+        model = AttentionModel(batch_size=config['batch_size'], epochs=config['epochs'],
+                               vocab_size=config['vocab_size'],
+                               max_len=config['max_len'], filters=config['filters'], kernel_size=config['kernel_size'],
+                               optimizer=config['optimizer'], learning_rate=config['learning_rate'],
+                               max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
+                               embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
+                               pool_size=config['pool_size'], path_train=config['path_train'],
+                               path_test=config['path_test'], path_dev=config['path_dev'], emb_type=config['emb_type'],
+                               buffer_size=config['buffer_size'], rate=config['rate'],
+                               length_type=config['length_type'],
+                               dense_units=config['dense_units'], both_embeddings=config['both_embeddings'],
+                               att_units=config['att_units']
+                               )
+        model.prepare_data_as_tensors()
         print('Building the model.')
         model.call()
         print('Previo a fit')
-        model.fit(with_validation=False)
+        model.fit_as_tensors(with_validation=True)
         print('Previo a predict')
         model.predict()
     elif args['mode'] == 3:
@@ -88,7 +86,7 @@ def main():
                             pool_size=config['pool_size'], path_train=config['path_train'],
                             path_test=config['path_test'], path_dev=config['path_dev'], emb_type=config['emb_type'],
                             buffer_size=config['buffer_size'], rate=config['rate'], length_type=config['length_type'],
-                            dense_units=config['dense_units']
+                            dense_units=config['dense_units'], concat=config['concat']
                             )
         model.prepare_data_as_tensors()
         print('Building the model.')
@@ -109,7 +107,7 @@ def main():
                             pool_size=config['pool_size'], path_train=config['path_train'],
                             path_test=config['path_test'], path_dev=None, emb_type=config['emb_type'],
                             buffer_size=config['buffer_size'], rate=config['rate'], length_type=config['length_type'],
-                            dense_units=config['dense_units']
+                            dense_units=config['dense_units'], concat=config['concat']
                             )
         model.prepare_data_as_tensors()
         print('Building the model.')
@@ -148,7 +146,7 @@ def main():
                                  emb_type=config['emb_type'],
                                  buffer_size=config['buffer_size'], rate=config['rate'],
                                  length_type=config['length_type'], dense_units=config['dense_units'],
-                                 attheads=config['attheads']
+                                 attheads=config['attheads'], att_layers=config['att_layers']
                                  )
         model.prepare_data_as_tensors()
         print('Building the model.')
@@ -157,6 +155,30 @@ def main():
         model.fit_as_tensors(with_validation=True)
         print('Previo a predict')
         model.predict()
+    elif args['mode'] == 7:
+        # Creación del modelo con embeddings de fasttext o glove
+        config = ModelConfig.MeanModelConfig.value
+        model = MeanModel(batch_size=config['batch_size'], epochs=config['epochs'],
+                               vocab_size=config['vocab_size'],
+                               max_len=config['max_len'], filters=config['filters'], kernel_size=config['kernel_size'],
+                               optimizer=config['optimizer'], learning_rate=config['learning_rate'],
+                               max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
+                               embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
+                               pool_size=config['pool_size'], path_train=config['path_train'],
+                               path_test=config['path_test'], path_dev=config['path_dev'], emb_type=config['emb_type'],
+                               buffer_size=config['buffer_size'], rate=config['rate'],
+                               length_type=config['length_type'],
+                               dense_units=config['dense_units']
+                               )
+        model.prepare_data_v2()
+        print('Building the model.')
+        model.call()
+        print('Previo a fit')
+        model.fit(with_validation=True)
+        print('Previo a predict')
+        model.predict_v2()
+        # print('Se guarda historial del loss:')
+        # model.save_plot_history()
     else:
         print('No other mode implemented yed.')
 

@@ -15,8 +15,8 @@ from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
 
 class BertModel(BaseModel):
     def __init__(self, max_len, path_train, path_test, path_dev, epochs, learning_rate, optimizer,
-                 load_embeddings, batch_size=32, embedding_size='300', emb_type='fasttext',
-                 vocab_size=None, max_sequence_len=None, rate=0.2, trainable=True, length_type='mean'):
+                 load_embeddings, batch_size=16, embedding_size='300', emb_type='glove',
+                 vocab_size=None, max_sequence_len=None, rate=0.2, trainable=True, length_type='median'):
         super(BertModel, self).__init__(max_len=max_len, path_train=path_train,
                                         path_test=path_test, path_dev=path_dev, batch_size=batch_size,
                                         embedding_size=embedding_size, emb_type=emb_type, vocab_size=vocab_size,
