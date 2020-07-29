@@ -429,30 +429,3 @@ class BaseModel(Layer):
         print('Precision-Propaganda: ', precision_score(y_true, real_preds))
         print('Recall-Propaganda: ', recall_score(y_true, real_preds))
         print('F1-Propaganda: ', f1_score(y_true, real_preds))
-
-    def predict_v2(self):
-        """Make the prediction for the test/dev data. It uses the data from the own class.
-        """
-        # Actually it works as a test function to prove that the code is working.
-        print('TEST SET')
-        preds = self.model.predict([self.X_test, self.mean_embeddings_test], batch_size=self.batch_size, verbose=0)
-        real_preds = []
-        for p in preds:
-            if p[0] > p[1]:
-                real_preds.append(0)
-            else:
-                real_preds.append(1)
-        print(real_preds[:10])
-        y_true = []
-        for p in self.y_test:
-            if p[0] > p[1]:
-                y_true.append(0)
-            else:
-                y_true.append(1)
-
-        print(classification_report(y_true, real_preds))
-        print('Roc auc score: ', roc_auc_score(y_true, real_preds))
-        print('Accuracy: ', accuracy_score(y_true, real_preds))
-        print('Precision: ', precision_score(y_true, real_preds))
-        print('Recall: ', recall_score(y_true, real_preds))
-        print('F1 Global: ', f1_score(y_true, real_preds))
