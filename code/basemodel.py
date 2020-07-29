@@ -299,10 +299,10 @@ class BaseModel(Layer):
             self.emb = FactoryEmbeddings()
             self.emb.load_embeddings(self.emb_type)
 
-        self.mean_embeddings = self.emb.embeddings.calc_embeddings(self.train.text)
-        self.mean_embeddings_test = self.emb.embeddings.calc_embeddings(self.test.text)
+        self.mean_embeddings = self.emb.embeddings.calc_embeddings(self.train.text, self.max_sequence_len)
+        self.mean_embeddings_test = self.emb.embeddings.calc_embeddings(self.test.text, self.max_sequence_len)
         if self.path_dev is not None:
-            self.mean_embeddings_dev = self.emb.embeddings.calc_embeddings(self.dev.text)
+            self.mean_embeddings_dev = self.emb.embeddings.calc_embeddings(self.dev.text, self.max_sequence_len)
 
 
 

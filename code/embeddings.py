@@ -43,8 +43,8 @@ class Embeddings(ABC):
         # This function will be deleted in the future
         embeddings = []
         null_embeddings = np.zeros(self.d)
-        total_words = 0
         for sequence in text:
+            max_words_allowed = 0
             lines = sent_tokenize(sequence)
             embedding_sequence = null_embeddings
             count = 0 # Count all the lines
@@ -63,7 +63,7 @@ class Embeddings(ABC):
                         # embedding_word = np.random.normal(0, 1, self.d)
                         embedding_word = null_embeddings
                     embedding_sentence = np.sum([embedding_sentence, embedding_word], axis=0)
-                    total_words+=1
+                    max_words_allowed+=1
                 # embedding_sentence = embedding_sentence / count_word
                 embedding_sequence = np.sum([embedding_sequence, embedding_sentence], axis=0)
             embedding_sequence = embedding_sequence / count # Divide by all the lines
