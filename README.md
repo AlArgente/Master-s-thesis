@@ -11,5 +11,5 @@ También se han desarrollado modelos de atención, uno basado en la atención qu
 
 Se ha desarrollado un modelo basado en transformers ([modeltransformer.py](https://github.com/AlArgente/TFM/blob/master/code/modeltransformer.py)), en el que sólo se ha utilizado en encoder del transformer, pero no se ha llegado a profundidar en su uso y por tanto no se ha preparado un buen modelo, sí bien se tiene una base para el futuro.
 
-Se ha decidido utilizar el modelo de BERT para realizar fine-tuning en la predicción de FakeNews. Además puede servir de base para utilizar Albert u otros modelos pre-entrenados sin tener que realizar muchos cambios. El fichero de este modelo es [bertmodel.py[(https://github.com/AlArgente/TFM/blob/master/code/bertmodel.py)
+Se ha decidido utilizar el modelo de BERT para realizar fine-tuning en la predicción de FakeNews. Además puede servir de base para utilizar Albert u otros modelos pre-entrenados sin tener que realizar muchos cambios. El fichero de este modelo es [bertmodel.py](https://github.com/AlArgente/TFM/blob/master/code/bertmodel.py)
 
