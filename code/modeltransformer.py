@@ -25,7 +25,7 @@ class TransformerModel(BaseModel):
 
     def __init__(self, batch_size, epochs, optimizer, max_sequence_len, lstm_units,
                  path_train, path_test, path_dev, filters=64, kernel_size=5,
-                 vocab_size=None, learning_rate=1e-3, pool_size=4, rate=0.2,
+                 vocab_size=None, learning_rate=1e-3, pool_size=4, rate=0.2, l2_rate=1e-5,
                  embedding_size=300, max_len=1900, load_embeddings=True, buffer_size=3, emb_type='fasttext',
                  length_type='median', dense_units=128, attheads=12, att_layers=2):
         """Init function for the model.
@@ -38,7 +38,7 @@ class TransformerModel(BaseModel):
                                                optimizer=optimizer, load_embeddings=load_embeddings, rate=rate,
                                                length_type=length_type, dense_units=dense_units,
                                                filters=filters, kernel_size=kernel_size, pool_size=pool_size,
-                                               buffer_size=buffer_size
+                                               buffer_size=buffer_size, l2_rate=l2_rate
                                                )
         self.lstm_units = lstm_units
         self.attheads = attheads
@@ -59,16 +59,16 @@ class TransformerModel(BaseModel):
         # transformer_block = TransformerBlock(self.embedding_size, self.attheads, self.dense_units, self.rate)
         # x = transformer_block(x)
         # Now shape = # (None, input_seq_len, embeddings_dim)
-        x = Dense(self.dense_units)(x)
-        x = GlobalAveragePooling1D()(x)
+        x = Dense(self.dense_units, activation='relu', kernel_regularizer=l2(self.l2_rate), name='dense_layer1')(x)
+        x = GlobalMaxPool1D()(x)
         # Now shape = (None, embeddings_dim)
         # x = Dropout(self.rate)(x)
-        x = Dense(self.dense_units)(x)
+        # x = Dense(self.dense_units)(x)
         # Now shape = (None, self.dense_units)
         x = Dropout(self.rate)(x)
         output = Dense(2, activation='softmax')(x)
         # Now shape = (None, 2)
-        self.model = Model(inputs=self.inputs, outputs=output)
+        self.model = Model(inputs=self.inputs, outputs=output, name='transformer_model')
         self.model.compile(loss=BinaryCrossentropy(),
                            optimizer=self.optimizer,
                            metrics=self.METRICS)

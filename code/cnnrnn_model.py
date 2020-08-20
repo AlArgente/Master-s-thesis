@@ -6,7 +6,7 @@ from __future__ import print_function
 import tensorflow as tf
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import LSTM, Bidirectional, Conv1D, Attention, GlobalAveragePooling1D, GlobalMaxPool1D, \
-    Dropout, Layer, Dense, MaxPool1D, Concatenate
+    Dropout, Layer, Dense, MaxPool1D, Concatenate, SpatialDropout1D
 from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy, SparseCategoricalCrossentropy
 from tensorflow.keras.regularizers import l2, l1, l1_l2
 from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
@@ -24,7 +24,7 @@ class CNNRNNModel(BaseModel):
                  path_train, path_test, path_dev, vocab_size=None, learning_rate=1e-3,
                  filters=64, kernel_size=5, pool_size=4, rate=0.2,
                  embedding_size=300, max_len=100000, load_embeddings=True, buffer_size=3, emb_type='glove',
-                 length_type='median', dense_units=128, concat=False):
+                 length_type='median', dense_units=128, concat=False, l2_rate=1e-5):
         """Init function for the model.
         """
         super(CNNRNNModel, self).__init__(max_len=max_len, path_train=path_train,
@@ -34,7 +34,7 @@ class CNNRNNModel(BaseModel):
                                           optimizer=optimizer, load_embeddings=load_embeddings, rate=rate,
                                           length_type=length_type, dense_units=dense_units,
                                           filters=filters, kernel_size=kernel_size, pool_size=pool_size,
-                                          buffer_size=buffer_size
+                                          buffer_size=buffer_size, l2_rate=l2_rate
                                           )
         self.lstm_units = lstm_units
         self.concat = concat
@@ -54,29 +54,30 @@ class CNNRNNModel(BaseModel):
                                                     input_length=self.max_sequence_len,
                                                     trainable=False, name='embeddings')
         embedding_sequence = embedding_layer(sequence_input)
-
+        embedding_sequence = SpatialDropout1D(0.2)(embedding_sequence)
         # Add the BiLSTM layer
         x = Bidirectional(LSTM(units=self.lstm_units, activation='tanh', return_sequences=True,
                                recurrent_dropout=0, recurrent_activation='sigmoid', unroll=False, use_bias=True,
-                               kernel_regularizer=l2(0.0001)), name='bilstm')(embedding_sequence)
+                               kernel_regularizer=l2(self.l2_rate)), name='bilstm')(embedding_sequence)
         # To concat dense_units == lstm_units x 2 (bilstm)
         if self.concat:
             # Add the Dense layer
-            dense = Dense(units=self.dense_units, activation='relu', kernel_regularizer=l2(0.0001), name='dense_layer')(
+            dense = Dense(units=self.dense_units, activation='relu', kernel_regularizer=l2(self.l2_rate), name='dense_layer')(
                 x)
             concat = Concatenate(axis=1)([x, dense])
         else:
             concat = x
         max_pooling = GlobalMaxPool1D(name='pooling')(concat)
         # Add the Dense layer
-        dense = Dense(units=self.dense_units, activation='relu', kernel_regularizer=l2(0.0001), name='dense_layer')(max_pooling)
+        dense = Dense(units=self.dense_units, activation='relu', kernel_regularizer=l2(self.l2_rate),
+                      name='dense_layer')(max_pooling)
         dropout = Dropout(self.rate)(dense)
         # Pred layer
         prediction = Dense(units=2, activation='softmax', name='pred_layer')(dropout)
         # For correct metrics precision and recall while training -> also change train_y, test_y, dev_y to 1D np.array
         # prediction = Dense(units=1, activation='sigmoid', name='pred_layer')(max_pooling)
         # Generate the model
-        self.model = Model(inputs=[sequence_input], outputs=[prediction])
+        self.model = Model(inputs=[sequence_input], outputs=[prediction], name='bilstm_model')
         self.model.compile(loss=BinaryCrossentropy(),
                            optimizer=self.optimizer,
                            metrics=self.METRICS)

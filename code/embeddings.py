@@ -33,7 +33,7 @@ class Embeddings(ABC):
     def load_embeddings(self, fname):
         pass
 
-    def calc_embeddings(self, text, max_sequence_len):
+    def calc_embeddings(self, text, max_sequence_len, max_sentences_in_sequence):
         """Function that apply the vector to get the embeddings from the text.
         Arguments:
             - text: list of lists with the text at least tokenized.
@@ -45,17 +45,19 @@ class Embeddings(ABC):
         null_embeddings = np.zeros(self.d)
         for sequence in text:
             max_words_allowed = 0
-            lines = sent_tokenize(sequence)
+            sentences = sent_tokenize(sequence)
             embedding_sequence = null_embeddings
             count = 0 # Count all the lines
-            for line in lines:
+            for sentence in sentences:
+                if count >= max_sentences_in_sequence: # If limit of sentences reached
+                    continue
                 embedding_sentence = null_embeddings
-                words = word_tokenize(line, preserve_line=True)
+                words = word_tokenize(sentence, preserve_line=True)
                 count_word = 0
                 count += 1
                 for word in words: # Every word in the line
                     count_word += 1
-                    if total_words >= max_sequence_len:
+                    if max_words_allowed >= max_sequence_len:
                         continue
                     if word in self.embeddings.keys():
                         embedding_word = self.embeddings[word]

@@ -5,28 +5,31 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
+import tensorflow_addons as tfa
 import tensorflow_datasets as tfds
+from tensorflow.keras.layers import LSTM, Bidirectional
 from tensorflow.keras import Model
-from tensorflow.keras.layers import LSTM, Bidirectional, Conv1D, Attention, GlobalAveragePooling1D, GlobalMaxPool1D, \
-    Dropout, Layer, Dense, MaxPool1D, Concatenate, SpatialDropout1D
 from basemodel import BaseModel
 from tensorflow.keras.losses import BinaryCrossentropy
 from sklearn.metrics import classification_report, accuracy_score, roc_auc_score, f1_score, precision_score, \
     recall_score
+from tensorflow.keras.regularizers import l2
 
 
-class BertModel(BaseModel):
+class BertBiLSTMModel(BaseModel):
     def __init__(self, max_len, path_train, path_test, epochs, learning_rate, optimizer,
                  load_embeddings, batch_size=16, embedding_size='300', emb_type='glove', path_dev=None,
-                 vocab_size=None, max_sequence_len=None, rate=0.2, trainable=True, length_type='median'):
-        super(BertModel, self).__init__(max_len=max_len, path_train=path_train,
+                 vocab_size=None, max_sequence_len=None, rate=0.2, trainable=True, length_type='median',
+                 lstm_units=64, l2_rate=1e-5):
+        super(BertBiLSTMModel, self).__init__(max_len=max_len, path_train=path_train,
                                         path_test=path_test, path_dev=path_dev, batch_size=batch_size,
                                         embedding_size=embedding_size, emb_type=emb_type, vocab_size=vocab_size,
                                         max_sequence_len=max_sequence_len, epochs=epochs, learning_rate=learning_rate,
                                         optimizer=optimizer, load_embeddings=load_embeddings, rate=rate,
-                                        length_type=length_type)
+                                        length_type=length_type, l2_rate=l2_rate)
 
         self.trainable = trainable
+        self.lstm_units = lstm_units
         if self.length_type == 'fixed':
             pass
         elif self.length_type == 'mean':
@@ -44,21 +47,22 @@ class BertModel(BaseModel):
                                                  name="input_mask")
         self.input_type_ids = tf.keras.layers.Input(shape=(self.max_sequence_len,), dtype=tf.int32,
                                                     name="input_type_ids")
+        self.bilstm = Bidirectional(LSTM(units=self.lstm_units, activation='tanh', return_sequences=True,
+                               recurrent_dropout=0, recurrent_activation='sigmoid', unroll=False, use_bias=True,
+                               kernel_regularizer=l2(self.l2_rate)), name='bilstm')
         self.bert_layer = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/1",
-                                         trainable=self.trainable, name='BERT')
+                                         trainable=self.trainable)
         self.vocab_file = self.bert_layer.resolved_object.vocab_file.asset_path.numpy()
         self.do_lower_case = self.bert_layer.resolved_object.do_lower_case.numpy()
         self.tokenizer = bert.bert_tokenization.FullTokenizer(self.vocab_file, self.do_lower_case)
-        self.pooled_output, self.sequence_output = self.bert_layer([self.input_word_ids, self.input_masks,
+        _, self.sequence_output = self.bert_layer([self.input_word_ids, self.input_masks,
                                                    self.input_type_ids])
-        print(self.pooled_output.shape)
 
     def call(self):
-        # self.clf_output = self.sequence_output[:, 0, :]
-        self.clf_output = self.pooled_output
-        self.clf_output = Dropout(0.5)(self.clf_output)
-        self.clf_output = Dense(128)(self.clf_output)
-        self.out = tf.keras.layers.Dense(2, activation='softmax')(self.clf_output)
+        self.clf_output = self.sequence_output[:, 0, :]
+        x = self.bilstm(self.sequence_output)
+        x = tf.keras.layers.GlobalMaxPool1D()(x)
+        self.out = tf.keras.layers.Dense(2, activation='softmax')(x)
         self.model = tf.keras.models.Model(inputs=[self.input_word_ids,
                                                    self.input_masks,
                                                    self.input_type_ids], outputs=self.out)
@@ -77,10 +81,10 @@ class BertModel(BaseModel):
         else:
             self.history = self.model.fit(self.train_inputs,
                                           self.y_train, batch_size=self.batch_size, epochs=self.epochs, verbose=1,
-                                          shuffle=True, class_weight=self.class_weights)
+                                          shuffle=True, class_weight=self.class_weights,
+                                          validation_data=(self.dev_inputs, self.y_dev))
 
     def predict(self):
-        print('TEST SET')
         preds = self.model.predict(self.test_inputs, batch_size=self.batch_size)
         real_preds = []
         for p in preds:
@@ -91,29 +95,6 @@ class BertModel(BaseModel):
         print(real_preds[:10])
         y_true = []
         for p in self.y_test:
-            if p[0] > p[1]:
-                y_true.append(0)
-            else:
-                y_true.append(1)
-
-        print(classification_report(y_true, real_preds))
-        print('Roc auc score: ', roc_auc_score(y_true, real_preds))
-        print('Accuracy: ', accuracy_score(y_true, real_preds))
-        print('Precision: ', precision_score(y_true, real_preds))
-        print('Recall: ', recall_score(y_true, real_preds))
-        print('F1 Global: ', f1_score(y_true, real_preds))
-
-        print('DEV SET')
-        preds = self.model.predict(self.dev_inputs, batch_size=self.batch_size)
-        real_preds = []
-        for p in preds:
-            if p[0] > p[1]:
-                real_preds.append(0)
-            else:
-                real_preds.append(1)
-        print(real_preds[:10])
-        y_true = []
-        for p in self.y_dev:
             if p[0] > p[1]:
                 y_true.append(0)
             else:

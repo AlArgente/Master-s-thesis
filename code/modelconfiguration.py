@@ -22,11 +22,12 @@ class ModelConfig(Enum):
         'max_len' : 100000,
         'load_embeddings' : True,
         'buffer_size' : 3,
-        'emb_type' : 'glove',
-        'rate': 0.15,
+        'emb_type' : 'fasttext',
+        'rate': 0.05,
         'length_type': 'median',
         'dense_units': 128,
-        'concat': False
+        'concat': False,
+        'l2_rate':1e-5
     }
 
     SecondExperiment = {
@@ -37,8 +38,8 @@ class ModelConfig(Enum):
         'optimizer': 'adam',
         'max_sequence_len': 455,
         'lstm_units': 64,
-        'path_train' : '../data/train_raw.tsv',
-        'path_test': '../data/test_raw.tsv',
+        'path_train' : '../data/train_exp_2.tsv',
+        'path_test': '../data/test_exp_2.tsv',
         'vocab_size' : None,
         'learning_rate': 1e-3,
         'pool_size': 2,
@@ -46,11 +47,12 @@ class ModelConfig(Enum):
         'max_len' : 100000,
         'load_embeddings' : True,
         'buffer_size' : 3,
-        'emb_type' : 'glove',
+        'emb_type' : 'fasttext',
         'rate': 0.15,
         'length_type': 'median',
         'dense_units': 128,
-        'concat': False
+        'concat': False,
+        'l2_rate': 1e-5
     }
 
     TransformerConfig = {
@@ -71,17 +73,18 @@ class ModelConfig(Enum):
         'max_len': 100000,
         'load_embeddings': True,
         'buffer_size': 3,
-        'emb_type': 'glove',
+        'emb_type': 'fasttext',
         'rate': 0.15,
         'length_type': 'median',
         'dense_units': 64,
         'attheads': 12,
-        'att_layers': 2
+        'att_layers': 2,
+        'l2_rate': 1e-5
     }
 
     AttentionConfig = {
         'batch_size': 16,
-        'epochs': 20,
+        'epochs': 15,
         'filters': 64,
         'kernel_size': 5,
         'optimizer': 'adam',
@@ -97,12 +100,13 @@ class ModelConfig(Enum):
         'max_len': 100000,
         'load_embeddings': True,
         'buffer_size': 3,
-        'emb_type': 'glove',
-        'rate': 0.15,
+        'emb_type': 'fasttext',
+        'rate': 0.05,
         'length_type': 'median',
         'dense_units': 64,
         'both_embeddings': False,
-        'att_units': 300
+        'att_units': 300,
+        'l2_rate': 1e-5
     }
 
     FineTuning = {
@@ -142,10 +146,51 @@ class ModelConfig(Enum):
         'length_type': 'fixed'
     }
 
+    BertConfigSecondExp = {
+        'batch_size': 16,
+        'epochs': 3,
+        'optimizer': 'adam',
+        'max_sequence_len': 350,  # Mejor resultado 300, segundo mejor 400 (pruebas: 280,315,320,330,350,500)
+        'path_train' : '../data/train_exp_2.tsv',
+        'path_test': '../data/test_exp_2.tsv',
+        'vocab_size': None,
+        'learning_rate': 5e-5,
+        'pool_size': 2,
+        'embedding_size': 300,
+        'max_len': 100000,
+        'load_embeddings': True,
+        'buffer_size': 3,
+        'emb_type': 'fasttext',
+        'rate': 0.5,
+        'trainable': True,
+        'length_type': 'fixed'
+    }
+
+    BertBiLSTMConfigSecondExp = {
+        'batch_size': 16,
+        'epochs': 3,
+        'optimizer': 'adam',
+        'max_sequence_len': 350,  # Mejor resultado 300, segundo mejor 400 (pruebas: 280,315,320,330,350,500)
+        'path_train': '../data/train_exp_2.tsv',
+        'path_test': '../data/test_exp_2.tsv',
+        'vocab_size': None,
+        'learning_rate': 5e-5,
+        'pool_size': 2,
+        'embedding_size': 300,
+        'max_len': 100000,
+        'load_embeddings': True,
+        'buffer_size': 3,
+        'emb_type': 'fasttext',
+        'rate': 0.5,
+        'trainable': True,
+        'length_type': 'fixed',
+        'lstm_units': 64
+    }
+
     MeanModelConfig = {
         'batch_size': 16,
         'epochs': 15,
-        'filters': 64,
+        'filters': 128,
         'kernel_size': 5,
         'optimizer': 'adam',
         'max_sequence_len': 455,
@@ -160,8 +205,9 @@ class ModelConfig(Enum):
         'max_len': 100000,
         'load_embeddings': True,
         'buffer_size': 3,
-        'emb_type': 'glove',
-        'rate': 0.15,
+        'emb_type': 'fasttext',
+        'rate': 0.2,
         'length_type': 'median',
-        'dense_units': 128,
+        'dense_units': 64,
+        'l2_rate': 1e-5
     }
