@@ -54,10 +54,12 @@ class BertModel(BaseModel):
         print(self.pooled_output.shape)
 
     def call(self):
-        # self.clf_output = self.sequence_output[:, 0, :]
-        self.clf_output = self.pooled_output
-        self.clf_output = Dropout(0.5)(self.clf_output)
-        self.clf_output = Dense(128)(self.clf_output)
+        self.clf_output = self.sequence_output[:, 0, :]
+        # self.clf_output = self.sequence_output
+        # self.clf_output = GlobalMaxPool1D()(self.clf_output)
+        # self.clf_output = self.pooled_output
+        self.clf_output = Dropout(0.15)(self.clf_output)
+        self.clf_output = Dense(128, kernel_regularizer=tf.keras.regularizers.l2(1e-5))(self.clf_output)
         self.out = tf.keras.layers.Dense(2, activation='softmax')(self.clf_output)
         self.model = tf.keras.models.Model(inputs=[self.input_word_ids,
                                                    self.input_masks,
@@ -101,7 +103,8 @@ class BertModel(BaseModel):
         print('Accuracy: ', accuracy_score(y_true, real_preds))
         print('Precision: ', precision_score(y_true, real_preds))
         print('Recall: ', recall_score(y_true, real_preds))
-        print('F1 Global: ', f1_score(y_true, real_preds))
+        print('F1-Propaganda: ', f1_score(y_true, real_preds))
+        print('Macro F1-Propaganda: ', f1_score(y_true, real_preds, average='macro'))
 
         print('DEV SET')
         preds = self.model.predict(self.dev_inputs, batch_size=self.batch_size)
@@ -124,7 +127,8 @@ class BertModel(BaseModel):
         print('Accuracy: ', accuracy_score(y_true, real_preds))
         print('Precision: ', precision_score(y_true, real_preds))
         print('Recall: ', recall_score(y_true, real_preds))
-        print('F1 Global: ', f1_score(y_true, real_preds))
+        print('F1-Propaganda: ', f1_score(y_true, real_preds))
+        print('Macro F1-Propaganda: ', f1_score(y_true, real_preds, average='macro'))
 
     def load_data(self):
         """Load the data from the paths given. This function override the BaseModel load_data function.
@@ -137,17 +141,17 @@ class BertModel(BaseModel):
             self.data_dev = pd.read_csv(self.path_dev, sep='\t')
             self.data_dev.loc[self.data_dev['label'] == -1, 'label'] = 0
             self.dev = self.data_dev.text.values
-            # self.dev_inputs = self._encoder(self.dev)
-            self.dev_inputs = self._bert_encode(self.dev)
+            self.dev_inputs = self._encoder(self.dev)
+            # self.dev_inputs = self._bert_encode(self.dev)
         self.train = self.data_train.text.values
         self.test = self.data_test.text.values
         # Prepare the data for the model.
-        # self.train_inputs = self._encoder(self.train)
-        # self.test_inputs = self._encoder(self.test)
+        self.train_inputs = self._encoder(self.train)
+        self.test_inputs = self._encoder(self.test)
         # self.train_inputs = self._encoder(self.dev) # For a fast test
         # Prepare the data using the bert_encode function
-        self.train_inputs = self._bert_encode(self.train)
-        self.test_inputs = self._bert_encode(self.test)
+        # self.train_inputs = self._bert_encode(self.train)
+        # self.test_inputs = self._bert_encode(self.test)
         # self.train_inputs = self._bert_encode(self.dev) # For a fast test
         # Labels #
         # self.y_train = self.data_train['label'].values

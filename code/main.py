@@ -21,7 +21,7 @@ from modelconfiguration import ModelConfig
 def main():
     start_time = time.time()
     random.seed(42)
-    os.environ["CUDA_VISIBLE_DEVICES"] = '-1'
+    # os.environ["CUDA_VISIBLE_DEVICES"] = '-1'
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=int, help='Preprocess or execute the data.', default=None)
     args = vars(parser.parse_args())  # Convert the arguments to a dict
@@ -178,8 +178,8 @@ def main():
         model.fit_as_tensors(with_validation=False)
         print('Previo a predict')
         model.predict_test_dev()
-        # print('Se guarda historial del loss:')
-        # model.save_plot_history()
+        print('Se muestra la atención:')
+        model.plot_attention()
     elif args['mode'] == 8:
         config = ModelConfig.SecondExperiment.value
         model = AttentionModel(batch_size=config['batch_size'], epochs=config['epochs'], vocab_size=config['vocab_size'],

@@ -318,3 +318,4 @@ class SelfAttention(Layer):
             return embedding_matrix_flattened, attention_weights
         elif self.model_api == 'sequential':
             return embedding_matrix_flattened
+

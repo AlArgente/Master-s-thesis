@@ -243,6 +243,8 @@ class BaseModel(Layer):
         if self.path_dev is not None:
             self.X_dev = pad_sequences(word_seq_dev, maxlen=self.max_sequence_len)
 
+        self.tokenizer=tokenizer
+
     def __mean_padding(self, text):
         lst = []
         for sequence in text:
