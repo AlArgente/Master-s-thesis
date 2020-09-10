@@ -29,7 +29,7 @@ sns.set()
 SEED = 42
 
 
-class MeanModel(BaseModel):
+class LocalAttentionModel(BaseModel):
     '''Class that contain the attention model created for the Proppy database.
     '''
 
@@ -40,7 +40,7 @@ class MeanModel(BaseModel):
                  length_type='median', dense_units=128, both_embeddings=False):
         """Init function for the model.
         """
-        super(MeanModel, self).__init__(max_len=max_len, path_train=path_train,
+        super(LocalAttentionModel, self).__init__(max_len=max_len, path_train=path_train,
                                         path_test=path_test, path_dev=path_dev, batch_size=batch_size,
                                         embedding_size=embedding_size, emb_type=emb_type, vocab_size=vocab_size,
                                         max_sequence_len=max_sequence_len, epochs=epochs,
@@ -98,7 +98,7 @@ class MeanModel(BaseModel):
         # embedding_sequence = Concatenate(axis=1, name='full_embeddings')([embedding_sequence_glove,
         #                                                                   embedding_sequence_ft])
         embedding_sequence = token_embeddings_glove(sequence_input)
-        # embedding_sequence = SpatialDropout1D(0.2)(embedding_sequence)
+        embedding_sequence = SpatialDropout1D(0.2)(embedding_sequence)
         # embedding_sequence = Conv1D(self.filters, self.kernel_size, activation='relu')(embedding_sequence)
         # Add the BiLSTM layer and get the states
         x, forward_h, forward_c, backward_h, backward_c = Bidirectional(LSTM(units=self.lstm_units, activation='tanh',
@@ -117,20 +117,26 @@ class MeanModel(BaseModel):
         # Preparing the input
         hidden_state = Concatenate()([forward_h, backward_h])
         attention_input = [x, hidden_state]
-        enconder_output, att_weights = Attention(context='many-to-one',
+        encoder_output, att_weights = Attention(context='many-to-one',
                                                  alignment_type='local-p*',
                                                  window_width=100,
                                                  score_function='scaled_dot',
                                                  name='attention_layer')(attention_input)
-        # out = LayerNormalization(epsilon=1e-6)([enconder_output+att_weights])
-        # enconder_output = Flatten()(enconder_output)
-        out = GlobalMaxPool1D()(enconder_output)
-        # out = GlobalMaxPool1D()(out)
+        # out = LayerNormalization(epsilon=1e-6)([encoder_output+att_weights])
+        ########################## NEW ###############################
+        out = Dense(self.dense_units, activation='tanh', kernel_regularizer=l2(self.l2_rate), name='dense')(
+            encoder_output)
+        out = Dropout(rate=self.rate, name='dropout')(out)
+        # out = Flatten(name='Flatten')(out)
+        # out = Dropout(rate=self.rate, name='dropout')(out)
+        # encoder_output = Flatten()(encoder_output)
+        # out = GlobalMaxPool1D()(encoder_output)
+        out = GlobalMaxPool1D()(out)
         # concat = Dense(self.dense_units/2, activation='relu', kernel_regularizer=l2(self.l2_rate))(concat)
         # final = Concatenate(axis=1)([final, context])
         # Pred layer
         prediction = Dense(units=2, activation='softmax', name='pred_layer')(out)
-        self.model = Model(inputs=[sequence_input], outputs=[prediction], name='mean_model')
+        self.model = Model(inputs=[sequence_input], outputs=[prediction], name='local-attention-model')
         self.model.compile(loss=BinaryCrossentropy(),
                            optimizer=self.optimizer,
                            metrics=self.METRICS)

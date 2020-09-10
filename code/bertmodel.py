@@ -28,7 +28,7 @@ class BertModel(BaseModel):
 
         self.trainable = trainable
         if self.length_type == 'fixed':
-            pass
+            self.max_sequence_len = max_sequence_len
         elif self.length_type == 'mean':
             self.max_sequence_len = self.mean_length
         elif self.length_type == 'mode':
@@ -68,7 +68,7 @@ class BertModel(BaseModel):
         self.model.compile(optimizer=self.optimizer,
                            loss=BinaryCrossentropy(),
                            metrics=self.METRICS)
-        # tf.keras.utils.plot_model(self.model, show_shapes=True, dpi=48, to_file='bertmodel.png')
+        tf.keras.utils.plot_model(self.model, show_shapes=True, dpi=48, to_file='bertmodel.png')
         self.model.summary()
 
     def fit(self, with_validation=False):

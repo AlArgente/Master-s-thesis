@@ -6,13 +6,13 @@ import time
 import os
 import random
 
-from cnnrnn_model import CNNRNNModel
+from cnnrnn_model import BiLSTMModel
 from attention_model import AttentionModel
-from mean_model import MeanModel
+from mean_model import LocalAttentionModel
 from modeltransformer import TransformerModel
 from finetune import FineTuningModel
 from bertmodel import BertModel
-from bertbilstmmodel import BertBiLSTMModel
+from bertbilstmmodel import LocalAttentionModelNela
 from preprocessing import Preprocessing
 import pandas as pd
 from modelconfiguration import ModelConfig
@@ -66,20 +66,20 @@ def main():
                                path_test=config['path_test'], path_dev=config['path_dev'], emb_type=config['emb_type'],
                                buffer_size=config['buffer_size'], rate=config['rate'],
                                length_type=config['length_type'],
-                               dense_units=config['dense_units'], both_embeddings=config['both_embeddings'],
+                               dense_units=config['dense_units'],
                                att_units=config['att_units']
                                )
         model.prepare_data_as_tensors()
         print('Building the model.')
         model.call()
         print('Previo a fit')
-        model.fit_as_tensors(with_validation=True)
+        model.fit_as_tensors(with_validation=False)
         print('Previo a predict')
-        model.predict()
+        model.predict_test_dev()
     elif args['mode'] == 3:
         # Creación del modelo con embeddings de fasttext o glove
         config = ModelConfig.TrainEmbeddings.value
-        model = CNNRNNModel(batch_size=config['batch_size'], epochs=config['epochs'], vocab_size=config['vocab_size'],
+        model = BiLSTMModel(batch_size=config['batch_size'], epochs=config['epochs'], vocab_size=config['vocab_size'],
                             max_len=config['max_len'], filters=config['filters'], kernel_size=config['kernel_size'],
                             optimizer=config['optimizer'], learning_rate=config['learning_rate'],
                             max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
@@ -93,14 +93,14 @@ def main():
         print('Building the model.')
         model.call()
         print('Previo a fit')
-        model.fit_as_tensors(with_validation=False)
+        # model.fit_as_tensors(with_validation=False)
         print('Previo a predict')
-        model.predict_test_dev()
+        # model.predict_test_dev()
         # print('Se guarda historial del loss:')
         # model.save_plot_history()
     elif args['mode'] == 4:
         config = ModelConfig.SecondExperiment.value
-        model = CNNRNNModel(batch_size=config['batch_size'], epochs=config['epochs'], vocab_size=config['vocab_size'],
+        model = BiLSTMModel(batch_size=config['batch_size'], epochs=config['epochs'], vocab_size=config['vocab_size'],
                             max_len=config['max_len'], filters=config['filters'], kernel_size=config['kernel_size'],
                             optimizer=config['optimizer'], learning_rate=config['learning_rate'],
                             max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
@@ -114,7 +114,7 @@ def main():
         print('Building the model.')
         model.call()
         print('Previo a fit')
-        model.fit_as_tensors(with_validation=True)
+        model.fit_as_tensors(with_validation=False)
         print('Previo a predict')
         model.predict()
     elif args['mode'] == 5:
@@ -130,9 +130,9 @@ def main():
         print('Creating the model.')
         model.call()
         print('Fitting the model.')
-        model.fit(with_validation=True)
+        # model.fit(with_validation=True)
         print('Predict the test set.')
-        model.predict()
+        # model.predict()
     elif args['mode'] == 6:
         config = ModelConfig.TransformerConfig.value
         model = TransformerModel(batch_size=config['batch_size'], epochs=config['epochs'],
@@ -159,18 +159,20 @@ def main():
     elif args['mode'] == 7:
         # Creación del modelo con embeddings de fasttext o glove
         config = ModelConfig.MeanModelConfig.value
-        model = MeanModel(batch_size=config['batch_size'], epochs=config['epochs'],
-                          vocab_size=config['vocab_size'],
-                          max_len=config['max_len'], filters=config['filters'], kernel_size=config['kernel_size'],
-                          optimizer=config['optimizer'], learning_rate=config['learning_rate'],
-                          max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
-                          embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
-                          pool_size=config['pool_size'], path_train=config['path_train'],
-                          path_test=config['path_test'], path_dev=config['path_dev'], emb_type=config['emb_type'],
-                          buffer_size=config['buffer_size'], rate=config['rate'],
-                          length_type=config['length_type'],
-                          dense_units=config['dense_units']
-                          )
+        model = LocalAttentionModel(batch_size=config['batch_size'], epochs=config['epochs'],
+                                    vocab_size=config['vocab_size'],
+                                    max_len=config['max_len'], filters=config['filters'],
+                                    kernel_size=config['kernel_size'],
+                                    optimizer=config['optimizer'], learning_rate=config['learning_rate'],
+                                    max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
+                                    embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
+                                    pool_size=config['pool_size'], path_train=config['path_train'],
+                                    path_test=config['path_test'], path_dev=config['path_dev'],
+                                    emb_type=config['emb_type'],
+                                    buffer_size=config['buffer_size'], rate=config['rate'],
+                                    length_type=config['length_type'],
+                                    dense_units=config['dense_units']
+                                    )
         model.prepare_data_as_tensors()
         print('Building the model.')
         model.call()
@@ -179,19 +181,21 @@ def main():
         print('Previo a predict')
         model.predict_test_dev()
         print('Se muestra la atención:')
-        model.plot_attention()
+        # model.plot_attention()
     elif args['mode'] == 8:
         config = ModelConfig.SecondExperiment.value
-        model = AttentionModel(batch_size=config['batch_size'], epochs=config['epochs'], vocab_size=config['vocab_size'],
-                            max_len=config['max_len'], filters=config['filters'], kernel_size=config['kernel_size'],
-                            optimizer=config['optimizer'], learning_rate=config['learning_rate'],
-                            max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
-                            embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
-                            pool_size=config['pool_size'], path_train=config['path_train'],
-                            path_test=config['path_test'], path_dev=None, emb_type=config['emb_type'],
-                            buffer_size=config['buffer_size'], rate=config['rate'], length_type=config['length_type'],
-                            dense_units=config['dense_units']
-                            )
+        model = AttentionModel(batch_size=config['batch_size'], epochs=config['epochs'],
+                               vocab_size=config['vocab_size'],
+                               max_len=config['max_len'], filters=config['filters'], kernel_size=config['kernel_size'],
+                               optimizer=config['optimizer'], learning_rate=config['learning_rate'],
+                               max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
+                               embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
+                               pool_size=config['pool_size'], path_train=config['path_train'],
+                               path_test=config['path_test'], path_dev=None, emb_type=config['emb_type'],
+                               buffer_size=config['buffer_size'], rate=config['rate'],
+                               length_type=config['length_type'],
+                               dense_units=config['dense_units']
+                               )
         model.prepare_data_as_tensors()
         print('Building the model.')
         model.call()
@@ -239,16 +243,19 @@ def main():
         model.predict()
     elif args['mode'] == 11:
         config = ModelConfig.SecondExperiment.value
-        model = MeanModel(batch_size=config['batch_size'], epochs=config['epochs'], vocab_size=config['vocab_size'],
-                            max_len=config['max_len'], filters=config['filters'], kernel_size=config['kernel_size'],
-                            optimizer=config['optimizer'], learning_rate=config['learning_rate'],
-                            max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
-                            embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
-                            pool_size=config['pool_size'], path_train=config['path_train'],
-                            path_test=config['path_test'], path_dev=None, emb_type=config['emb_type'],
-                            buffer_size=config['buffer_size'], rate=config['rate'], length_type=config['length_type'],
-                            dense_units=config['dense_units']
-                            )
+        model = LocalAttentionModel(batch_size=config['batch_size'], epochs=config['epochs'],
+                                    vocab_size=config['vocab_size'],
+                                    max_len=config['max_len'], filters=config['filters'],
+                                    kernel_size=config['kernel_size'],
+                                    optimizer=config['optimizer'], learning_rate=config['learning_rate'],
+                                    max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
+                                    embedding_size=config['embedding_size'], load_embeddings=config['load_embeddings'],
+                                    pool_size=config['pool_size'], path_train=config['path_train'],
+                                    path_test=config['path_test'], path_dev=None, emb_type=config['emb_type'],
+                                    buffer_size=config['buffer_size'], rate=config['rate'],
+                                    length_type=config['length_type'],
+                                    dense_units=config['dense_units']
+                                    )
         model.prepare_data_as_tensors()
         print('Building the model.')
         model.call()
@@ -257,21 +264,29 @@ def main():
         print('Previo a predict')
         model.predict()
     elif args['mode'] == 12:
-        config = ModelConfig.BertBiLSTMConfigSecondExp.value
-        model = BertBiLSTMModel(max_len=config['max_len'], path_train=config['path_train'], path_test=config['path_test'],
-                          epochs=config['epochs'], optimizer=config['optimizer'],
-                          load_embeddings=False, batch_size=config['batch_size'],
-                          max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
-                          rate=config['rate'], learning_rate=config['learning_rate'], length_type=config['length_type']
-                          )
-        print('Loading the data.')
-        model.load_data()
-        print('Creating the model.')
+        config = ModelConfig.MeanModelConfig.value
+        model = LocalAttentionModelNela(batch_size=config['batch_size'], epochs=config['epochs'],
+                                        vocab_size=config['vocab_size'],
+                                        max_len=config['max_len'], filters=config['filters'],
+                                        kernel_size=config['kernel_size'],
+                                        optimizer=config['optimizer'], learning_rate=config['learning_rate'],
+                                        max_sequence_len=config['max_sequence_len'], lstm_units=config['lstm_units'],
+                                        embedding_size=config['embedding_size'],
+                                        load_embeddings=config['load_embeddings'],
+                                        pool_size=config['pool_size'], path_train=config['path_train'],
+                                        path_test=config['path_test'], path_dev=config['path_dev'],
+                                        emb_type=config['emb_type'],
+                                        buffer_size=config['buffer_size'], rate=config['rate'],
+                                        length_type=config['length_type'],
+                                        dense_units=config['dense_units']
+                                        )
+        model.prepare_data()
+        print('Building the model.')
         model.call()
-        print('Fitting the model.')
+        print('Previo a fit')
         model.fit(with_validation=False)
-        print('Predict the test set.')
-        model.predict()
+        print('Previo a predict')
+        model.predict_test_dev()
     else:
         print('No other mode implemented yed.')
 

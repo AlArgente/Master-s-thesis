@@ -16,7 +16,7 @@ from basemodel import BaseModel
 SEED = 42
 
 
-class CNNRNNModel(BaseModel):
+class BiLSTMModel(BaseModel):
     '''Class that contain the attention model created for the Proppy database.
     '''
 
@@ -27,7 +27,7 @@ class CNNRNNModel(BaseModel):
                  length_type='median', dense_units=128, concat=False, l2_rate=1e-5):
         """Init function for the model.
         """
-        super(CNNRNNModel, self).__init__(max_len=max_len, path_train=path_train,
+        super(BiLSTMModel, self).__init__(max_len=max_len, path_train=path_train,
                                           path_test=path_test, path_dev=path_dev, batch_size=batch_size,
                                           embedding_size=embedding_size, emb_type=emb_type, vocab_size=vocab_size,
                                           max_sequence_len=max_sequence_len, epochs=epochs, learning_rate=learning_rate,
@@ -38,6 +38,31 @@ class CNNRNNModel(BaseModel):
                                           )
         self.lstm_units = lstm_units
         self.concat = concat
+
+    """
+    def call(self):
+        sequence_input = tf.keras.layers.Input(shape=(self.max_sequence_len,), dtype="int32", name="seq_input")
+        embedding_layer = tf.keras.layers.Embedding(self.nb_words, self.embedding_size,
+                                                    weights=[self.embeddings_matrix],
+                                                    input_length=self.max_sequence_len,
+                                                    trainable=False, name='embeddings')
+        embedding_sequence = embedding_layer(sequence_input)
+        x = Conv1D(filters=self.filters, kernel_size=self.kernel_size, kernel_regularizer=l2(self.l2_rate))(embedding_sequence)
+        x = MaxPool1D(pool_size=self.pool_size)(x)
+        x = Bidirectional(LSTM(units=self.lstm_units, activation='tanh', return_sequences=True,
+                               recurrent_dropout=0, recurrent_activation='sigmoid', unroll=False, use_bias=True,
+                               kernel_regularizer=l2(self.l2_rate)), name='bilstm')(x)
+        x = Dense(units=self.dense_units, activation='relu', kernel_regularizer=l2(self.l2_rate),
+                      name='dense_layer')(x)
+        x = Dropout(self.rate)(x)
+        x = GlobalMaxPool1D()(x)
+        prediction = Dense(units=2, activation='softmax', name='pred_layer')(x)
+        self.model = Model(inputs=[sequence_input], outputs=[prediction], name='cnn_bilstm_model')
+        self.model.compile(loss=BinaryCrossentropy(),
+                           optimizer=self.optimizer,
+                           metrics=self.METRICS)
+        tf.keras.utils.plot_model(self.model, show_shapes=True, dpi=48, to_file='cnnrnnmodel.png')
+    """
 
     def call(self):
         """Build the model with all the layers.
@@ -83,7 +108,7 @@ class CNNRNNModel(BaseModel):
                            metrics=self.METRICS)
 
         self.model.summary()
-        # tf.keras.utils.plot_model(self.model, show_shapes=True, dpi=48, to_file='cnnrnnmodel.png')
+        # tf.keras.utils.plot_model(self.model, show_shapes=True, dpi=48, to_file='bilstmodel.png')
 
 """
 # Last model done.
