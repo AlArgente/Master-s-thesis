@@ -13,3 +13,4 @@ Se ha desarrollado un modelo basado en transformers ([modeltransformer.py](https
 
 Se ha decidido utilizar el modelo de BERT para realizar fine-tuning en la predicción de FakeNews. Además puede servir de base para utilizar Albert u otros modelos pre-entrenados sin tener que realizar muchos cambios. El fichero de este modelo es [bertmodel.py](https://github.com/AlArgente/TFM/blob/master/code/bertmodel.py)
 
+Para poder ejecutar este ćodigo es necesario disponer de los embeddings de Glove y FastText. Una vez se tengan los archivos, se debe actualizar el path del fichero 'embeddings.py'.
