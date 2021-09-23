@@ -1,6 +1,8 @@
 # Master's thesis
 ### Trabajo de Fin de Master (Master's thesis) Fake News Detection
 
+(*English description below the spanish's*)
+
 Se añadirá el código que se va a desarrollar para el TFM. La base de datos está disponible en [Zenodo: Proppy Corpus 1.0](https://zenodo.org/record/3271522#.XS6qRUUzau4)
 
 La versión de Python utilizada ha sido Python 3.8.2. El sistema operativo utilizado ha sido Ubuntu 20.04 LTS. El framework que se ha utilizado es [TensorFlow](http://tensorflow.org/), en concreto la versión 2.2.0. 
