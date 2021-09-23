@@ -1,5 +1,5 @@
 # Master's thesis
-### Trabajo de Fin de Master (Master's thesis)
+### Trabajo de Fin de Master (Master's thesis) Fake News Detection
 
 Se añadirá el código que se va a desarrollar para el TFM. La base de datos está disponible en [Zenodo: Proppy Corpus 1.0](https://zenodo.org/record/3271522#.XS6qRUUzau4)
 
